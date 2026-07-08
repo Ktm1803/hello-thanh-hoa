@@ -1,0 +1,6 @@
+{
+  "name": "Hello Thanh Hóa",
+  "description": "Cổng thông tin khám phá địa điểm du lịch, ẩm thực, giải trí và dịch vụ tốt nhất tại xứ Thanh với sự hỗ trợ của Trợ lý Lập lịch trình AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
