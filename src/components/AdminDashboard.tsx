@@ -22,7 +22,8 @@ import {
   Save, 
   ExternalLink,
   Search,
-  Upload
+  Upload,
+  Eye
 } from 'lucide-react';
 import { 
   getSpots, 
@@ -40,6 +41,8 @@ import {
   getImages, 
   saveImage, 
   deleteImage,
+  addNotification,
+  optimizeHighQualityImage,
   AppCategory,
   AppImage,
   UserAccount
@@ -59,6 +62,8 @@ export default function AdminDashboard() {
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState('');
+  const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
+  const [selectedPartner, setSelectedPartner] = useState<UserAccount | null>(null);
 
   // Editing Forms Toggle States
   const [showCategoryForm, setShowCategoryForm] = useState(false);
@@ -85,6 +90,7 @@ export default function AdminDashboard() {
   const [spotDesc, setSpotDesc] = useState('');
   const [spotContact, setSpotContact] = useState('');
   const [spotFacebookLink, setSpotFacebookLink] = useState('');
+  const [spotMapLink, setSpotMapLink] = useState('');
   const [spotHighlights, setSpotHighlights] = useState('');
   const [spotDeals, setSpotDeals] = useState('');
 
@@ -103,21 +109,11 @@ export default function AdminDashboard() {
   const [imgTitle, setImgTitle] = useState('');
   const [imgAssociatedSpot, setImgAssociatedSpot] = useState('');
 
-  // Helper for image file uploading (Converts File to Base64)
+  // Helper for image file uploading (Converts File to Base64 with high-quality compression)
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB Limit
-        alert('Dung lượng ảnh quá lớn! Vui lòng chọn ảnh nhỏ hơn 2MB.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          callback(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
+      optimizeHighQualityImage(file, callback);
     }
   };
 
@@ -218,7 +214,8 @@ export default function AdminDashboard() {
       highlights: highlightsArray.length ? highlightsArray : ['Tiện ích cao cấp', 'Phục vụ tận tâm'],
       reviews: existing?.reviews || [],
       deals: dealsArray.length ? dealsArray : undefined,
-      facebookLink: spotFacebookLink
+      facebookLink: spotFacebookLink,
+      mapLink: spotMapLink
     };
 
     saveSpot(newSpot);
@@ -232,6 +229,7 @@ export default function AdminDashboard() {
     setSpotDesc('');
     setSpotContact('');
     setSpotFacebookLink('');
+    setSpotMapLink('');
     setSpotHighlights('');
     setSpotDeals('');
     setSpotImage('');
@@ -251,6 +249,7 @@ export default function AdminDashboard() {
     setSpotDesc(s.description);
     setSpotContact(s.contact);
     setSpotFacebookLink(s.facebookLink || '');
+    setSpotMapLink(s.mapLink || '');
     setSpotHighlights(s.highlights.join('\n'));
     setSpotDeals(s.deals ? s.deals.join('\n') : '');
     setShowSpotForm(true);
@@ -316,6 +315,27 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleApproveArticle = (article: Article) => {
+    const updated = { ...article, approved: true };
+    saveArticle(updated);
+    loadData();
+    
+    // Find partner user to send notification to
+    const userEmail = article.authorEmail || getUsers().find(u => u.businessName === article.author || u.name === article.author)?.email;
+    if (userEmail) {
+      addNotification({
+        recipientEmail: userEmail,
+        title: 'Bài viết đã được phê duyệt thành công! 🎉',
+        message: `Bài viết cẩm nang tiếp thị của bạn "${article.title}" đã được kiểm duyệt và phê duyệt hiển thị chính thức trên hệ thống Hello Thanh Hóa.`,
+        type: 'success',
+        articleId: article.id,
+        articleTitle: article.title
+      });
+    }
+
+    alert(`Phê duyệt thành công bài viết "${article.title}"!`);
+  };
+
   // Image Gallery Actions
   const handleAddImage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -377,7 +397,8 @@ export default function AdminDashboard() {
         checkins: '10 Check-ins',
         contact: user.email,
         highlights: ['Doanh nghiệp uy tín', 'Đăng ký chính thức'],
-        reviews: []
+        reviews: [],
+        mapLink: user.businessMapLink
       };
       saveSpot(bSpot);
     }
@@ -821,6 +842,16 @@ export default function AdminDashboard() {
                 className="w-full px-3.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
               />
             </div>
+            <div className="col-span-3">
+              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Đường dẫn Bản đồ chỉ đường (Google Maps Link)</label>
+              <input
+                type="url"
+                placeholder="https://maps.app.goo.gl/... hoặc https://google.com/maps/..."
+                value={spotMapLink}
+                onChange={e => setSpotMapLink(e.target.value)}
+                className="w-full px-3.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
+              />
+            </div>
             <div className="col-span-3 border border-slate-200 border-dashed rounded-xl p-4 bg-white/50 space-y-3">
               <span className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Hình ảnh Địa điểm (Gắn link hoặc Tải ảnh lên) *</span>
               
@@ -829,7 +860,7 @@ export default function AdminDashboard() {
                 <div className="flex flex-col justify-center items-center p-4 border border-slate-200 rounded-lg bg-slate-50 hover:bg-slate-100/75 transition-colors relative group min-h-[110px]">
                   <Upload className="w-6 h-6 text-slate-400 mb-2 group-hover:text-blue-500 transition-colors" />
                   <p className="text-[11px] font-bold text-slate-600">Chọn tệp ảnh từ thiết bị</p>
-                  <p className="text-[9px] text-slate-400 mt-0.5">PNG, JPG, WEBP nhỏ hơn 2MB</p>
+                  <p className="text-[9px] text-slate-400 mt-0.5">Ảnh chất lượng cao, tối đa 15MB</p>
                   <input
                     type="file"
                     accept="image/*"
@@ -982,7 +1013,7 @@ export default function AdminDashboard() {
                 <div className="flex flex-col justify-center items-center p-4 border border-slate-200 rounded-lg bg-slate-50 hover:bg-slate-100/75 transition-colors relative group min-h-[110px]">
                   <Upload className="w-6 h-6 text-slate-400 mb-2 group-hover:text-blue-500 transition-colors" />
                   <p className="text-[11px] font-bold text-slate-600">Chọn tệp ảnh bài viết</p>
-                  <p className="text-[9px] text-slate-400 mt-0.5">PNG, JPG, WEBP nhỏ hơn 2MB</p>
+                  <p className="text-[9px] text-slate-400 mt-0.5">Ảnh chất lượng cao, tối đa 15MB</p>
                   <input
                     type="file"
                     accept="image/*"
@@ -1076,7 +1107,7 @@ export default function AdminDashboard() {
                 <div className="flex flex-col justify-center items-center p-4 border border-slate-200 rounded-lg bg-slate-50 hover:bg-slate-100/75 transition-colors relative group min-h-[110px]">
                   <Upload className="w-6 h-6 text-slate-400 mb-2 group-hover:text-blue-500 transition-colors" />
                   <p className="text-[11px] font-bold text-slate-600">Chọn tệp ảnh từ thiết bị</p>
-                  <p className="text-[9px] text-slate-400 mt-0.5">PNG, JPG, WEBP nhỏ hơn 2MB</p>
+                  <p className="text-[9px] text-slate-400 mt-0.5">Ảnh chất lượng cao, tối đa 15MB</p>
                   <input
                     type="file"
                     accept="image/*"
@@ -1284,6 +1315,7 @@ export default function AdminDashboard() {
                       <th className="pb-3">Phân Mục</th>
                       <th className="pb-3">Người Viết</th>
                       <th className="pb-3">Thời gian</th>
+                      <th className="pb-3 text-center">Trạng Thái</th>
                       <th className="pb-3 text-right pr-2">Thao Tác</th>
                     </tr>
                   </thead>
@@ -1306,17 +1338,46 @@ export default function AdminDashboard() {
                         </td>
                         <td className="py-3 text-slate-500 font-bold">{art.author}</td>
                         <td className="py-3 text-slate-400 font-light">{art.date}</td>
+                        <td className="py-3 text-center">
+                          {art.approved === false ? (
+                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100 uppercase">
+                              Chờ duyệt
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase">
+                              Hoạt động
+                            </span>
+                          )}
+                        </td>
                         <td className="py-3 text-right pr-2">
                           <div className="flex justify-end gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                            {art.approved === false && (
+                              <button
+                                onClick={() => handleApproveArticle(art)}
+                                className="px-2 py-0.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition-all cursor-pointer"
+                                title="Phê duyệt bài viết lên Web"
+                              >
+                                Phê duyệt
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setPreviewArticle(art)}
+                              className="p-1.5 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors cursor-pointer"
+                              title="Xem trước bài viết"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
                             <button
                               onClick={() => handleEditArticle(art)}
                               className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors cursor-pointer"
+                              title="Sửa bài viết"
                             >
                               <Edit className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleDeleteArticle(art.id)}
                               className="p-1.5 hover:bg-rose-50 text-rose-500 rounded-lg transition-colors cursor-pointer"
+                              title="Xóa bài viết"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -1382,68 +1443,96 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {partnerAccounts.map(p => (
-                  <tr key={p.email} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="py-3.5 pl-2">
-                      <div className="flex items-center gap-2">
-                        <img src={p.avatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&h=120&q=80'} alt={p.name} className="w-8 h-8 object-cover rounded-full border border-slate-100" />
-                        <span className="font-bold text-slate-800">{p.name}</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5">
-                      <p className="font-extrabold text-slate-800">{p.businessName || 'Cá nhân tự do'}</p>
-                      <p className="text-[10px] text-slate-400 font-light truncate max-w-xs">{p.businessDesc || 'Chưa có mô tả chi tiết'}</p>
-                    </td>
-                    <td className="py-3.5 font-bold uppercase tracking-wider text-slate-500 font-mono text-[10px]">
-                      {p.businessCategory || 'Chưa chọn'}
-                    </td>
-                    <td className="py-3.5 text-slate-600 font-medium">{p.businessDistrict || 'Tỉnh Thanh Hóa'}</td>
-                    <td className="py-3.5 font-mono text-slate-500 font-bold">{p.email}</td>
-                    <td className="py-3.5 text-center">
-                      {!p.approved ? (
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100 uppercase">
-                          Chờ duyệt
-                        </span>
-                      ) : p.active ? (
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase">
-                          Hoạt động
-                        </span>
-                      ) : (
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-100 uppercase">
-                          Đã khóa
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3.5 text-right pr-2">
-                      <div className="flex justify-end gap-1.5">
-                        {!p.approved && (
-                          <button
-                            onClick={() => handleApprovePartner(p)}
-                            className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition-all cursor-pointer shadow-2xs"
-                          >
-                            Phê duyệt cơ sở
-                          </button>
+                {partnerAccounts.map(p => {
+                  const pArticles = articles.filter(a => a.authorEmail === p.email || a.author === (p.businessName || p.name));
+                  const pendingArticles = pArticles.filter(a => a.approved === false);
+                  return (
+                    <tr 
+                      key={p.email} 
+                      className="hover:bg-slate-100/70 transition-colors group cursor-pointer"
+                      onClick={() => setSelectedPartner(p)}
+                      title="Nhấp vào để xem tất cả bài viết của doanh nghiệp"
+                    >
+                      <td className="py-3.5 pl-2">
+                        <div className="flex items-center gap-2">
+                          <img src={p.avatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&h=120&q=80'} alt={p.name} className="w-8 h-8 object-cover rounded-full border border-slate-100" />
+                          <span className="font-bold text-slate-800">{p.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-3.5">
+                        <p className="font-extrabold text-slate-800">{p.businessName || 'Cá nhân tự do'}</p>
+                        <p className="text-[10px] text-slate-400 font-light truncate max-w-xs">{p.businessDesc || 'Chưa có mô tả chi tiết'}</p>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-600 font-bold border border-slate-100">
+                            <BookOpen className="w-3 h-3 text-slate-400" /> {pArticles.length} bài viết
+                          </span>
+                          {pendingArticles.length > 0 && (
+                            <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-100 font-bold animate-pulse">
+                              ⚠️ {pendingArticles.length} chờ duyệt
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3.5 font-bold uppercase tracking-wider text-slate-500 font-mono text-[10px]">
+                        {p.businessCategory || 'Chưa chọn'}
+                      </td>
+                      <td className="py-3.5 text-slate-600 font-medium">{p.businessDistrict || 'Tỉnh Thanh Hóa'}</td>
+                      <td className="py-3.5 font-mono text-slate-500 font-bold">{p.email}</td>
+                      <td className="py-3.5 text-center">
+                        {!p.approved ? (
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100 uppercase">
+                            Chờ duyệt
+                          </span>
+                        ) : p.active ? (
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase">
+                            Hoạt động
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-100 uppercase">
+                            Đã khóa
+                          </span>
                         )}
-                        <button
-                          onClick={() => handleToggleUserActive(p)}
-                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                            p.active ? 'hover:bg-amber-50 text-amber-600' : 'hover:bg-emerald-50 text-emerald-600'
-                          }`}
-                          title={p.active ? 'Tạm đình chỉ tài khoản' : 'Kích hoạt lại tài khoản'}
-                        >
-                          {p.active ? <XCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-                        </button>
-                        <button
-                          onClick={() => handleDeleteUserAccount(p.email)}
-                          className="p-1.5 hover:bg-rose-50 text-rose-500 rounded-lg transition-colors cursor-pointer"
-                          title="Xóa tài khoản vĩnh viễn"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="py-3.5 text-right pr-2" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-end gap-1.5">
+                          {!p.approved && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleApprovePartner(p);
+                              }}
+                              className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition-all cursor-pointer shadow-2xs"
+                            >
+                              Phê duyệt cơ sở
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleUserActive(p);
+                            }}
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                              p.active ? 'hover:bg-amber-50 text-amber-600' : 'hover:bg-emerald-50 text-emerald-600'
+                            }`}
+                            title={p.active ? 'Tạm đình chỉ tài khoản' : 'Kích hoạt lại tài khoản'}
+                          >
+                            {p.active ? <XCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteUserAccount(p.email);
+                            }}
+                            className="p-1.5 hover:bg-rose-50 text-rose-500 rounded-lg transition-colors cursor-pointer"
+                            title="Xóa tài khoản vĩnh viễn"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1479,21 +1568,19 @@ export default function AdminDashboard() {
                         </span>
                       ) : (
                         <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-100 uppercase">
-                          Bị khóa
+                          Đã khóa
                         </span>
                       )}
                     </td>
-                    <td className="py-3.5 font-bold text-slate-500 uppercase tracking-wider font-mono text-[10px]">
-                      {t.role}
-                    </td>
+                    <td className="py-3.5 text-slate-600 font-medium">Khách du lịch</td>
                     <td className="py-3.5 text-right pr-2">
-                      <div className="flex justify-end gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                      <div className="flex justify-end gap-1.5">
                         <button
                           onClick={() => handleToggleUserActive(t)}
                           className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                             t.active ? 'hover:bg-amber-50 text-amber-600' : 'hover:bg-emerald-50 text-emerald-600'
                           }`}
-                          title={t.active ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
+                          title={t.active ? 'Tạm đình chỉ tài khoản' : 'Kích hoạt lại tài khoản'}
                         >
                           {t.active ? <XCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
                         </button>
@@ -1513,6 +1600,258 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+      {/* Article Preview Modal */}
+
+      {previewArticle && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto flex flex-col border border-slate-100">
+            {/* Header */}
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md uppercase tracking-wider">
+                  {previewArticle.category}
+                </span>
+                {previewArticle.approved === false ? (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100 uppercase">
+                    Chờ duyệt
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase">
+                    Hoạt động
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => setPreviewArticle(null)}
+                className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content Body */}
+            <div className="p-6 space-y-5 overflow-y-auto">
+              {/* Title & Meta */}
+              <div className="space-y-2">
+                <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 leading-snug">
+                  {previewArticle.title}
+                </h2>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400 font-light items-center">
+                  <span className="font-bold text-slate-600">Tác giả: {previewArticle.author}</span>
+                  <span>•</span>
+                  <span>Ngày viết: {previewArticle.date}</span>
+                  <span>•</span>
+                  <span>{previewArticle.readTime || '3 phút đọc'}</span>
+                </div>
+              </div>
+
+              {/* Cover Image */}
+              {previewArticle.image && (
+                <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-slate-100 shadow-sm">
+                  <img
+                    src={previewArticle.image}
+                    alt={previewArticle.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+
+              {/* Summary Box */}
+              {previewArticle.summary && (
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-xs italic text-slate-600 leading-relaxed">
+                  <strong>Tóm tắt:</strong> {previewArticle.summary}
+                </div>
+              )}
+
+              {/* Full Content */}
+              <div className="text-slate-700 text-xs md:text-sm leading-relaxed whitespace-pre-line space-y-4 font-normal">
+                {previewArticle.content}
+              </div>
+
+              {/* Facebook Link */}
+              {previewArticle.facebookLink && (
+                <div className="pt-4 border-t border-slate-100 flex items-center gap-2">
+                  <span className="text-xs text-slate-400 font-medium">Liên kết Facebook:</span>
+                  <a
+                    href={previewArticle.facebookLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
+                  >
+                    Xem trên Fanpage <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="p-5 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center gap-3">
+              <div className="flex gap-2">
+                {previewArticle.approved === false && (
+                  <button
+                    onClick={() => {
+                      handleApproveArticle(previewArticle);
+                      setPreviewArticle(null);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md cursor-pointer hover:scale-102 active:scale-98"
+                  >
+                    Phê duyệt bài viết
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    handleEditArticle(previewArticle);
+                    setPreviewArticle(null);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold transition-all cursor-pointer border border-blue-100"
+                >
+                  Sửa đổi
+                </button>
+              </div>
+              <button
+                onClick={() => setPreviewArticle(null)}
+                className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Partner Articles Drawer / Modal */}
+      {selectedPartner && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col border border-slate-100">
+            {/* Header */}
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-white z-10 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-bold shrink-0 overflow-hidden">
+                  <img src={selectedPartner.avatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&h=120&q=80'} alt={selectedPartner.name} className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-slate-900 leading-snug">
+                    Bài viết của: {selectedPartner.businessName || selectedPartner.name}
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-light mt-0.5">
+                    {selectedPartner.businessDesc || 'Cơ sở đăng ký chuyển đổi số xứ Thanh'} • Liên hệ: {selectedPartner.email}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedPartner(null)}
+                className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* List Body */}
+            <div className="p-6 overflow-y-auto space-y-4 flex-1">
+              {(() => {
+                const partnerArticles = articles.filter(a => a.authorEmail === selectedPartner.email || a.author === (selectedPartner.businessName || selectedPartner.name));
+                if (partnerArticles.length === 0) {
+                  return (
+                    <div className="text-center py-12 text-slate-400 space-y-2">
+                      <BookOpen className="w-12 h-12 mx-auto text-slate-300 stroke-1" />
+                      <p className="text-xs font-bold">Doanh nghiệp này chưa đăng tải bài viết nào</p>
+                      <p className="text-[10px] text-slate-400 max-w-sm mx-auto leading-relaxed">
+                        Các bài viết chuẩn SEO giới thiệu văn hóa, ẩm thực, du lịch xứ Thanh khi được doanh nghiệp đăng ký sẽ xuất hiện tại đây.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-4">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      Tổng số {partnerArticles.length} bài viết đã tải lên
+                    </p>
+                    <div className="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden bg-slate-50/20">
+                      {partnerArticles.map(art => (
+                        <div 
+                          key={art.id} 
+                          className={`p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors ${
+                            art.approved === false ? 'bg-amber-50/20 hover:bg-amber-50/45 border-l-4 border-amber-400' : 'bg-white hover:bg-slate-50/50'
+                          }`}
+                        >
+                          <div className="flex gap-3 items-start min-w-0 flex-1">
+                            <img src={art.image} alt={art.title} className="w-16 h-12 object-cover rounded-lg border border-slate-100 shrink-0 mt-0.5" />
+                            <div className="space-y-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 uppercase">
+                                  {art.category}
+                                </span>
+                                {art.approved === false ? (
+                                  <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                                    ⚠️ Chờ duyệt
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase">
+                                    Đang hoạt động
+                                  </span>
+                                )}
+                              </div>
+                              <h4 className="font-extrabold text-xs text-slate-800 line-clamp-1">{art.title}</h4>
+                              <p className="text-[10px] text-slate-400 font-light line-clamp-1">{art.summary}</p>
+                              <p className="text-[9px] text-slate-400 font-mono">{art.date} • {art.readTime || '3 phút đọc'}</p>
+                            </div>
+                          </div>
+
+                          {/* Quick Actions inside Partner Articles Modal */}
+                          <div className="flex items-center gap-1.5 shrink-0 w-full sm:w-auto justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100">
+                            {art.approved === false && (
+                              <button
+                                onClick={() => {
+                                  handleApproveArticle(art);
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-[10px] font-extrabold transition-all cursor-pointer shadow-xs flex items-center gap-0.5"
+                                title="Phê duyệt bài viết ngay lập tức"
+                              >
+                                <CheckCircle className="w-3 h-3" /> Duyệt nhanh
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setPreviewArticle(art)}
+                              className="p-1.5 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors cursor-pointer border border-indigo-100 bg-white"
+                              title="Xem chi tiết bài viết"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleEditArticle(art);
+                              }}
+                              className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors cursor-pointer border border-blue-100 bg-white"
+                              title="Sửa bài viết"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleDeleteArticle(art.id);
+                              }}
+                              className="p-1.5 hover:bg-rose-50 text-rose-500 rounded-lg transition-colors cursor-pointer border border-rose-100 bg-white"
+                              title="Xóa bài viết"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-100 text-center shrink-0">
+              <p className="text-[10px] text-slate-400 font-medium">Click chọn Xem chi tiết để đọc nội dung đầy đủ bài viết</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

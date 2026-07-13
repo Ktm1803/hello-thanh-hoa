@@ -10,6 +10,7 @@ export interface UserAccount {
   businessAddress?: string;
   businessDistrict?: string;
   businessDesc?: string;
+  businessMapLink?: string;
   avatar?: string;
   active: boolean;
   approved?: boolean;
@@ -235,3 +236,142 @@ export const setCurrentUser = (user: UserAccount | null): void => {
     localStorage.removeItem('hth_current_user');
   }
 };
+
+// Notification System for Partners
+export interface AppNotification {
+  id: string;
+  recipientEmail: string;
+  title: string;
+  message: string;
+  createdAt: string;
+  read: boolean;
+  type: 'success' | 'info' | 'warning';
+  articleId?: string;
+  articleTitle?: string;
+}
+
+export const getNotifications = (): AppNotification[] => {
+  initDb();
+  return JSON.parse(localStorage.getItem('hth_notifications') || '[]');
+};
+
+export const getNotificationsForUser = (email: string): AppNotification[] => {
+  const notifications = getNotifications();
+  return notifications
+    .filter(n => n.recipientEmail === email)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+};
+
+export const addNotification = (notif: Omit<AppNotification, 'id' | 'createdAt' | 'read'>): AppNotification => {
+  const notifications = getNotifications();
+  const newNotif: AppNotification = {
+    ...notif,
+    id: 'notif-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+    createdAt: new Date().toISOString(),
+    read: false
+  };
+  
+  const updated = [newNotif, ...notifications];
+  localStorage.setItem('hth_notifications', JSON.stringify(updated));
+  return newNotif;
+};
+
+export const markNotificationAsRead = (id: string): void => {
+  const notifications = getNotifications();
+  const updated = notifications.map(n => n.id === id ? { ...n, read: true } : n);
+  localStorage.setItem('hth_notifications', JSON.stringify(updated));
+};
+
+export const markAllNotificationsAsRead = (email: string): void => {
+  const notifications = getNotifications();
+  const updated = notifications.map(n => n.recipientEmail === email ? { ...n, read: true } : n);
+  localStorage.setItem('hth_notifications', JSON.stringify(updated));
+};
+
+export const removeNotification = (id: string): void => {
+  const notifications = getNotifications();
+  const updated = notifications.filter(n => n.id !== id);
+  localStorage.setItem('hth_notifications', JSON.stringify(updated));
+};
+
+/**
+ * Tối ưu hóa tệp hình ảnh chất lượng cao ở phía client.
+ * Hàm này đọc tệp hình ảnh, tải nó vào một đối tượng HTMLImageElement, tự động điều chỉnh
+ * giảm kích thước nếu vượt quá độ phân giải tối đa (ví dụ: 1920px chiều rộng/cao) để đảm bảo
+ * chất lượng sắc nét Full HD cho hiển thị web, đồng thời nén hình ảnh sang định dạng JPEG chất lượng cao (0.85-0.90)
+ * Giúp người dùng đăng ảnh chất lượng cực cao (hỗ trợ tệp gốc lên tới 15MB) mà vẫn giữ dung lượng lưu trữ 
+ * LocalStorage gọn nhẹ tối ưu (khoảng 150KB - 300KB) tránh đầy bộ nhớ trình duyệt.
+ */
+export function optimizeHighQualityImage(
+  file: File,
+  callback: (base64: string) => void,
+  onError?: (err: string) => void
+): void {
+  // Hỗ trợ dung lượng ảnh tối đa 15MB (cho ảnh chất lượng cao từ máy ảnh/điện thoại xịn)
+  const maxBytes = 15 * 1024 * 1024;
+  if (file.size > maxBytes) {
+    const errorMsg = 'Dung lượng ảnh quá lớn! Hệ thống hỗ trợ ảnh chất lượng cao lên tới 15MB.';
+    if (onError) {
+      onError(errorMsg);
+    } else {
+      alert(errorMsg);
+    }
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      // Giới hạn kích thước chiều rộng/cao tối đa cho chuẩn ảnh chất lượng cao Full HD trên Web (1920px)
+      const MAX_DIMENSION = 1920;
+      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        if (width > height) {
+          height = Math.round((height * MAX_DIMENSION) / width);
+          width = MAX_DIMENSION;
+        } else {
+          width = Math.round((width * MAX_DIMENSION) / height);
+          height = MAX_DIMENSION;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        // Nếu không lấy được context, fallback về kết quả base64 gốc
+        callback(reader.result as string);
+        return;
+      }
+
+      // Kích hoạt bộ lọc nội suy chất lượng cao để ảnh thu nhỏ vẫn giữ độ chi tiết sắc nét tuyệt hảo
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Xuất ra định dạng JPEG chất lượng cao (quality: 0.88 - tối ưu giữa độ nét và dung lượng)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+      callback(dataUrl);
+    };
+    img.onerror = () => {
+      // Fallback nếu không tải được thẻ ảnh
+      callback(reader.result as string);
+    };
+    img.src = e.target?.result as string;
+  };
+  reader.onerror = () => {
+    if (onError) {
+      onError('Không thể đọc file ảnh.');
+    } else {
+      alert('Không thể đọc file ảnh.');
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+

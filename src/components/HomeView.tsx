@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, MapPin, Star, Sparkles, Compass, Coffee, Utensils, Hotel, ShoppingBag, GraduationCap, ArrowRight, Clock, Percent, Heart, BookOpen, X, User, Calendar } from 'lucide-react';
-import { Spot, SPOTS, ARTICLES, Article, SPECIALTY_DISHES, SpecialtyDish } from '../data';
+import { Spot, Article, SPECIALTY_DISHES, SpecialtyDish } from '../data';
+import { getSpots, getArticles } from '../utils/db';
 import WeatherWidget from './WeatherWidget';
 import ScrollReveal from './ScrollReveal';
 
@@ -59,8 +60,12 @@ export default function HomeView({ onNavigate, savedSpotIds, onToggleSaveSpot }:
     { id: 'beauty', label: 'Làm đẹp & Ảnh', icon: Sparkles, color: 'bg-pink-50 text-pink-600 border-pink-100 hover:bg-pink-100' },
   ];
 
+  // Dynamic databases
+  const spotsList = getSpots();
+  const articlesList = getArticles().filter(art => art.approved !== false);
+
   // Filter spots for search autocomplete suggestions
-  const suggestions = searchQuery.trim() === '' ? [] : SPOTS.filter(spot => {
+  const suggestions = searchQuery.trim() === '' ? [] : spotsList.filter(spot => {
     const matchesQuery = spot.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          spot.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          spot.subCategory.toLowerCase().includes(searchQuery.toLowerCase());
@@ -80,8 +85,8 @@ export default function HomeView({ onNavigate, savedSpotIds, onToggleSaveSpot }:
   };
 
   // Get hot deals and trending spots
-  const trendingSpots = SPOTS.filter(spot => spot.rating >= 4.8).slice(0, 3);
-  const promotionalSpots = SPOTS.filter(spot => spot.deals && spot.deals.length > 0).slice(0, 3);
+  const trendingSpots = spotsList.filter(spot => spot.rating >= 4.8).slice(0, 3);
+  const promotionalSpots = spotsList.filter(spot => spot.deals && spot.deals.length > 0).slice(0, 3);
 
   return (
     <div className="w-full pb-12">
@@ -98,9 +103,32 @@ export default function HomeView({ onNavigate, savedSpotIds, onToggleSaveSpot }:
           <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4 drop-shadow-md">
             Khám Phá Thanh Hóa
           </h1>
-          <p className="text-sm md:text-lg text-slate-200 mb-8 max-w-xl drop-shadow-sm leading-relaxed font-light">
+          <p className="text-sm md:text-lg text-slate-200 mb-6 max-w-xl drop-shadow-sm leading-relaxed font-light">
             Tìm kiếm những địa điểm du lịch kỳ vĩ, ẩm thực truyền thống đặc sắc, không gian cà phê thư giãn và các dịch vụ tốt nhất tại xứ Thanh.
           </p>
+
+          {/* Category Quick Filter Bar */}
+          <div id="quick-categories-bar" className="flex flex-wrap justify-center gap-3.5 mb-8 w-full max-w-2xl px-4">
+            {[
+              { id: 'travel', label: 'Du lịch', icon: Compass, color: 'text-indigo-400 group-hover:text-indigo-300' },
+              { id: 'food', label: 'Ẩm thực', icon: Utensils, color: 'text-emerald-400 group-hover:text-emerald-300' },
+              { id: 'hotel', label: 'Khách sạn', icon: Hotel, color: 'text-rose-400 group-hover:text-rose-300' },
+              { id: 'cafe', label: 'Cà phê', icon: Coffee, color: 'text-amber-400 group-hover:text-amber-300' },
+            ].map((cat) => {
+              const Icon = cat.icon;
+              return (
+                <button
+                  key={cat.id}
+                  id={`quick-cat-btn-${cat.id}`}
+                  onClick={() => onNavigate(`explore?cat=${cat.id}`)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/10 hover:border-white/20 text-white font-medium text-xs md:text-sm backdrop-blur-md transition-all duration-300 hover:shadow-lg hover:scale-105 active:scale-98 cursor-pointer group"
+                >
+                  <Icon className={`w-4 h-4 transition-transform group-hover:rotate-12 group-hover:scale-110 ${cat.color}`} />
+                  <span>{cat.label}</span>
+                </button>
+              );
+            })}
+          </div>
 
           {/* Search bar */}
           <form onSubmit={handleSearchSubmit} className="w-full max-w-2xl bg-white rounded-xl shadow-2xl p-1.5 flex flex-col sm:flex-row gap-1.5 border border-slate-200 relative text-slate-800">
@@ -374,7 +402,7 @@ export default function HomeView({ onNavigate, savedSpotIds, onToggleSaveSpot }:
           <BookOpen className="w-5 h-5 text-pink-500" /> Cẩm Nang & Kinh Nghiệm Chia Sẻ
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {ARTICLES.map(article => (
+          {articlesList.map(article => (
             <div 
               key={article.id}
               onClick={() => setSelectedArticleId(article.id)}
@@ -387,7 +415,7 @@ export default function HomeView({ onNavigate, savedSpotIds, onToggleSaveSpot }:
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                 />
                 <span className="absolute top-3 left-3 bg-pink-500 text-white text-[9px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider shadow-sm">
-                  Làm đẹp & Ảnh
+                  {article.category || 'Cẩm nang'}
                 </span>
               </div>
               <div className="p-5 flex-1 flex flex-col justify-between">
@@ -416,7 +444,7 @@ export default function HomeView({ onNavigate, savedSpotIds, onToggleSaveSpot }:
 
       {/* Article Detail Modal */}
       {selectedArticleId && (() => {
-        const selectedArticle = ARTICLES.find(a => a.id === selectedArticleId);
+        const selectedArticle = articlesList.find(a => a.id === selectedArticleId);
         if (!selectedArticle) return null;
         return (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">

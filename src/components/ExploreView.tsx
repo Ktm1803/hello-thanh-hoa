@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Star, Compass, Coffee, Utensils, Hotel, ShoppingBag, GraduationCap, Grid, List, Check, RotateCcw, Heart, Map, Sparkles, Clock, Camera } from 'lucide-react';
-import { Spot, SPOTS } from '../data';
+import { Spot } from '../data';
+import { getSpots } from '../utils/db';
 import VisualMapView from './VisualMapView';
 import ScrollReveal from './ScrollReveal';
 
@@ -140,7 +141,8 @@ export default function ExploreView({
   };
 
   // Filter and sort items
-  const filteredSpots = SPOTS.filter(spot => {
+  const spotsList = getSpots().filter(spot => spot.approved !== false);
+  const filteredSpots = spotsList.filter(spot => {
     const matchesSearch = spot.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           spot.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           spot.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -170,8 +172,12 @@ export default function ExploreView({
     let matchesRating = true;
     if (ratingFilter === '5') {
       matchesRating = spot.rating >= 4.9;
-    } else if (ratingFilter === '4') {
+    } else if (ratingFilter === '4.5') {
       matchesRating = spot.rating >= 4.5;
+    } else if (ratingFilter === '4') {
+      matchesRating = spot.rating >= 4.0;
+    } else if (ratingFilter === '3') {
+      matchesRating = spot.rating >= 3.0;
     }
 
     const matchesOpen = !openOnly || spot.isOpen;
@@ -199,7 +205,7 @@ export default function ExploreView({
           Khám Phá Danh Mục Địa Điểm Xứ Thanh
         </h1>
         <p className="text-slate-500 text-sm">
-          Tìm kiếm trong {SPOTS.length} địa điểm chất lượng hàng đầu được xác thực chính thức tại Thanh Hóa.
+          Tìm kiếm trong {spotsList.length} địa điểm chất lượng hàng đầu được xác thực chính thức tại Thanh Hóa.
         </p>
       </div>
 
@@ -391,7 +397,9 @@ export default function ExploreView({
                 className="w-full border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
               >
                 <option value="all">Tất cả đánh giá</option>
-                <option value="4">Từ 4.5 ★ trở lên (Tốt)</option>
+                <option value="3">Từ 3.0 ★ trở lên (Khá)</option>
+                <option value="4">Từ 4.0 ★ trở lên (Tốt)</option>
+                <option value="4.5">Từ 4.5 ★ trở lên (Rất tốt)</option>
                 <option value="5">Từ 4.9 ★ trở lên (Tuyệt vời)</option>
               </select>
             </div>
@@ -512,7 +520,7 @@ export default function ExploreView({
                 <ScrollReveal key={spot.id} className="h-full">
                   <article 
                     onClick={() => onNavigate('detail', spot.id)}
-                    className={`bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden cursor-pointer group flex h-full ${
+                    className={`bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-xl hover:scale-[1.02] hover:-translate-y-0.5 hover:border-blue-100/50 transition-all duration-300 overflow-hidden cursor-pointer group flex h-full ${
                       viewMode === 'grid' ? 'flex-col' : 'flex-col sm:flex-row'
                     }`}
                   >

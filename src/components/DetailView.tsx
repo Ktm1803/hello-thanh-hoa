@@ -316,8 +316,18 @@ export default function DetailView({
               </div>
             </div>
 
-            {/* Facebook contact link */}
-            <div className="pt-3 border-t border-slate-100">
+            {/* Facebook contact link & Map directions */}
+            <div className="pt-3 border-t border-slate-100 space-y-2">
+              <a
+                href={spot.mapLink || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spot.name + ' ' + spot.address)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-2xs cursor-pointer"
+              >
+                <MapPin className="w-4 h-4 text-white" />
+                <span>{spot.mapLink ? 'Chỉ đường (Google Maps)' : 'Tìm kiếm trên Bản đồ'}</span>
+              </a>
+
               <a
                 href={spot.facebookLink || `https://www.facebook.com/search/pages/?q=${encodeURIComponent(spot.name + ' Thanh Hoá')}`}
                 target="_blank"

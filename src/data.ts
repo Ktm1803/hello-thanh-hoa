@@ -25,6 +25,8 @@ export interface Spot {
   reviews: Review[];
   deals?: string[];
   facebookLink?: string;
+  mapLink?: string;
+  approved?: boolean;
 }
 
 export const SPOTS: Spot[] = [
@@ -48,7 +50,8 @@ export const SPOTS: Spot[] = [
       { author: 'Minh Tuấn', rating: 5, text: 'Quá đẹp, không khí trong lành dễ chịu cực kỳ. Thung lũng ruộng bậc thang thu hút mọi ánh nhìn vào mùa lúa chín tháng 6 và tháng 10.', date: '2026-06-15', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&h=120&q=80' },
       { author: 'Lan Anh', rating: 5, text: 'Trải nghiệm homestay của người Thái rất thích. Đồ ăn đặc sản như vịt Cổ Lũng cực kỳ ngon và béo ngậy.', date: '2026-07-02', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80' }
     ],
-    deals: ['Giảm 15% cho đặt phòng bungalow tại Pù Luông Retreat trong tuần này', 'Tour leo núi săn mây trọn gói ưu đãi 10%']
+    deals: ['Giảm 15% cho đặt phòng bungalow tại Pù Luông Retreat trong tuần này', 'Tour leo núi săn mây trọn gói ưu đãi 10%'],
+    mapLink: 'https://maps.app.goo.gl/9P8XqD6gAnw8WJ1E9'
   },
   {
     id: 'sam-son',
@@ -69,7 +72,8 @@ export const SPOTS: Spot[] = [
     reviews: [
       { author: 'Hoàng Hải', rating: 4, text: 'Bãi biển sóng rất to, tắm rất đã. Sầm Sơn dạo này quy hoạch đẹp hơn xưa nhiều, không còn tình trạng chặt chém.', date: '2026-07-05', avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=120&h=120&q=80' }
     ],
-    deals: ['Combo vé vui chơi khu quảng trường biển & công viên nước giảm ngay 20%', 'Đón bình minh tại đền Độc Cước tặng nước mát miễn phí']
+    deals: ['Combo vé vui chơi khu quảng trường biển & công viên nước giảm ngay 20%', 'Đón bình minh tại đền Độc Cước tặng nước mát miễn phí'],
+    mapLink: 'https://maps.app.goo.gl/X9fD8QGvH3W58z2p8'
   },
   {
     id: 'thanh-nha-ho',
@@ -441,6 +445,8 @@ export interface Article {
   author: string;
   readTime: string;
   facebookLink?: string;
+  approved?: boolean;
+  authorEmail?: string;
 }
 
 export const ARTICLES: Article[] = [

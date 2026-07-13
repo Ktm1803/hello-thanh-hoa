@@ -25,15 +25,43 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
   const [businessName, setBusinessName] = useState('');
   const [businessCategory, setBusinessCategory] = useState('travel');
   const [businessAddress, setBusinessAddress] = useState('');
-  const [businessDistrict, setBusinessDistrict] = useState('TP. Thanh Hóa');
+  const [businessDistrict, setBusinessDistrict] = useState('Thành phố Thanh Hóa');
   const [businessDesc, setBusinessDesc] = useState('');
+  const [businessMapLink, setBusinessMapLink] = useState('');
 
   // UI Error State
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  const districts = ['TP. Thanh Hóa', 'TP. Sầm Sơn', 'Bá Thước', 'Vĩnh Lộc', 'Cẩm Thủy', 'Tĩnh Gia', 'Nga Sơn', 'Hoằng Hóa'];
+  const districts = [
+    'Thành phố Thanh Hóa',
+    'Thành phố Sầm Sơn',
+    'Thị xã Bỉm Sơn',
+    'Thị xã Nghi Sơn',
+    'Huyện Bá Thước',
+    'Huyện Cẩm Thủy',
+    'Huyện Đông Sơn',
+    'Huyện Hà Trung',
+    'Huyện Hậu Lộc',
+    'Huyện Hoằng Hóa',
+    'Huyện Lang Chánh',
+    'Huyện Mường Lát',
+    'Huyện Nga Sơn',
+    'Huyện Ngọc Lặc',
+    'Huyện Như Thanh',
+    'Huyện Như Xuân',
+    'Huyện Nông Cống',
+    'Huyện Quan Hóa',
+    'Huyện Quan Sơn',
+    'Huyện Quảng Xương',
+    'Huyện Thạch Thành',
+    'Huyện Thiệu Hóa',
+    'Huyện Thọ Xuân',
+    'Huyện Thường Xuân',
+    'Huyện Triệu Sơn',
+    'Huyện Vĩnh Lộc'
+  ];
 
   const handleToggleMode = () => {
     setMode(prev => prev === 'login' ? 'register' : 'login');
@@ -120,6 +148,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
           businessAddress,
           businessDistrict,
           businessDesc,
+          businessMapLink,
           approved: false // requires admin approval
         };
       } else {
@@ -344,6 +373,20 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                       rows={2}
                       value={businessDesc}
                       onChange={e => setBusinessDesc(e.target.value)}
+                      className="w-full pl-9 pr-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white placeholder-slate-300 font-medium text-slate-800"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Liên kết Bản đồ (Google Maps URL)</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                    <input
+                      type="url"
+                      placeholder="https://maps.app.goo.gl/... hoặc https://google.com/maps/..."
+                      value={businessMapLink}
+                      onChange={e => setBusinessMapLink(e.target.value)}
                       className="w-full pl-9 pr-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white placeholder-slate-300 font-medium text-slate-800"
                     />
                   </div>
