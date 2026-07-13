@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Building, TrendingUp, BookOpen, CheckCircle, Eye, MessageSquare, Award, Plus, ArrowRight, Upload, Facebook, Edit, Trash2, X, AlertTriangle, Bell, BellRing, Check } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { Spot, Article } from '../data';
 import { getArticles, saveArticle, deleteArticle, saveUser, getCurrentUser, UserAccount, addNotification, getNotificationsForUser, markNotificationAsRead, markAllNotificationsAsRead, removeNotification, AppNotification, optimizeHighQualityImage } from '../utils/db';
 import ScrollReveal from './ScrollReveal';
@@ -72,6 +71,10 @@ export default function PartnerPortal() {
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Hover states for custom SVG charts
+  const [hoveredDayIdx, setHoveredDayIdx] = useState<number | null>(null);
+  const [hoveredCatIdx, setHoveredCatIdx] = useState<number | null>(null);
 
   // Populate form when editing an article
   useEffect(() => {
@@ -992,43 +995,264 @@ export default function PartnerPortal() {
             {/* Charts render inside a grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-4">
               {/* Daily visit metrics */}
-              <div className="space-y-4">
-                <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider text-center">Tương tác của du khách theo ngày</h3>
-                <div className="w-full h-64 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={analyticsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorVisits" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                      <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} />
-                      <YAxis stroke="#94a3b8" fontSize={11} />
-                      <Tooltip />
-                      <Legend wrapperStyle={{ fontSize: 11 }} />
-                      <Area type="monotone" dataKey="Lượt truy cập" stroke="#2563eb" strokeWidth={2} fillOpacity={1} fill="url(#colorVisits)" />
-                      <Area type="monotone" dataKey="Lượt Check-in" stroke="#10b981" strokeWidth={2} fillOpacity={0} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
+              {(() => {
+                const paddingLeft = 45;
+                const plotWidth = 440;
+                const plotHeight = 160;
+                const bottomY = 185;
+
+                const accessPoints = analyticsData.map((d, i) => {
+                  const x = paddingLeft + (i / 6) * plotWidth;
+                  const y = bottomY - (d['Lượt truy cập'] / 5000) * plotHeight;
+                  return { x, y };
+                });
+
+                const checkinPoints = analyticsData.map((d, i) => {
+                  const x = paddingLeft + (i / 6) * plotWidth;
+                  const y = bottomY - (d['Lượt Check-in'] / 5000) * plotHeight;
+                  return { x, y };
+                });
+
+                const accessLinePath = accessPoints.length > 0 
+                  ? `M ${accessPoints.map(p => `${p.x} ${p.y}`).join(' L ')}`
+                  : '';
+
+                const accessAreaPath = accessPoints.length > 0
+                  ? `M ${accessPoints[0].x} ${bottomY} L ${accessPoints.map(p => `${p.x} ${p.y}`).join(' L ')} L ${accessPoints[accessPoints.length - 1].x} ${bottomY} Z`
+                  : '';
+
+                const checkinLinePath = checkinPoints.length > 0
+                  ? `M ${checkinPoints.map(p => `${p.x} ${p.y}`).join(' L ')}`
+                  : '';
+
+                const checkinAreaPath = checkinPoints.length > 0
+                  ? `M ${checkinPoints[0].x} ${bottomY} L ${checkinPoints.map(p => `${p.x} ${p.y}`).join(' L ')} L ${checkinPoints[checkinPoints.length - 1].x} ${bottomY} Z`
+                  : '';
+
+                return (
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider text-center">Tương tác của du khách theo ngày</h3>
+                    <div className="w-full h-64 bg-white p-3 rounded-xl border border-slate-100/80 shadow-2xs relative">
+                      <svg className="w-full h-full" viewBox="0 0 500 220" preserveAspectRatio="none">
+                        <defs>
+                          <linearGradient id="colorVisits" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.25}/>
+                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0.01}/>
+                          </linearGradient>
+                          <linearGradient id="colorCheckins" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.15}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0.01}/>
+                          </linearGradient>
+                        </defs>
+
+                        {/* Grid Lines */}
+                        {[0, 1000, 2000, 3000, 4000, 5000].map((val) => {
+                          const y = 185 - (val / 5000) * 160;
+                          return (
+                            <g key={val}>
+                              <line x1="45" y1={y} x2="485" y2={y} stroke="#f1f5f9" strokeWidth="1" />
+                              <text x="35" y={y + 3} textAnchor="end" className="fill-slate-400 font-bold text-[9px] font-mono">{val.toLocaleString()}</text>
+                            </g>
+                          );
+                        })}
+
+                        {/* Area Paths */}
+                        <path d={accessAreaPath} fill="url(#colorVisits)" pointerEvents="none" />
+                        <path d={checkinAreaPath} fill="url(#colorCheckins)" pointerEvents="none" />
+
+                        {/* Line Paths */}
+                        <path d={accessLinePath} fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" pointerEvents="none" />
+                        <path d={checkinLinePath} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" pointerEvents="none" />
+
+                        {/* Axis Lines */}
+                        <line x1="45" y1="185" x2="485" y2="185" stroke="#e2e8f0" strokeWidth="1" />
+
+                        {/* X-Axis Labels */}
+                        {analyticsData.map((d, i) => {
+                          const x = 45 + (i / 6) * 440;
+                          return (
+                            <text key={i} x={x} y="202" textAnchor="middle" className="fill-slate-400 font-extrabold text-[10px] font-sans">{d.name}</text>
+                          );
+                        })}
+
+                        {/* Vertical Interactive Hover Guidelines & Dots */}
+                        {hoveredDayIdx !== null && (
+                          <g pointerEvents="none">
+                            <line
+                              x1={45 + (hoveredDayIdx / 6) * 440}
+                              y1="25"
+                              x2={45 + (hoveredDayIdx / 6) * 440}
+                              y2="185"
+                              stroke="#cbd5e1"
+                              strokeDasharray="3 3"
+                              strokeWidth="1.5"
+                            />
+                            <circle
+                              cx={45 + (hoveredDayIdx / 6) * 440}
+                              cy={185 - (analyticsData[hoveredDayIdx]['Lượt truy cập'] / 5000) * 160}
+                              r="5"
+                              fill="#2563eb"
+                              stroke="#ffffff"
+                              strokeWidth="2"
+                            />
+                            <circle
+                              cx={45 + (hoveredDayIdx / 6) * 440}
+                              cy={185 - (analyticsData[hoveredDayIdx]['Lượt Check-in'] / 5000) * 160}
+                              r="5"
+                              fill="#10b981"
+                              stroke="#ffffff"
+                              strokeWidth="2"
+                            />
+                          </g>
+                        )}
+
+                        {/* Transparent Hover Columns */}
+                        {analyticsData.map((d, i) => {
+                          const xCenter = 45 + i * (440 / 6);
+                          const rectX = xCenter - (440 / 12);
+                          const rectW = 440 / 6;
+                          return (
+                            <rect
+                              key={i}
+                              x={rectX}
+                              y={25}
+                              width={rectW}
+                              height={160}
+                              fill="transparent"
+                              onMouseEnter={() => setHoveredDayIdx(i)}
+                              onMouseLeave={() => setHoveredDayIdx(null)}
+                              className="cursor-pointer"
+                            />
+                          );
+                        })}
+                      </svg>
+
+                      {/* HTML Hover Tooltip */}
+                      {hoveredDayIdx !== null && (
+                        <div
+                          className="absolute bg-slate-900/95 backdrop-blur-xs text-white p-3 rounded-xl shadow-xl border border-slate-800 z-20 text-left pointer-events-none text-[10px] space-y-1 w-40 transition-all duration-150"
+                          style={{
+                            left: `${Math.min(320, Math.max(10, 45 + (hoveredDayIdx / 6) * 440 - 80))}px`,
+                            top: '20px',
+                          }}
+                        >
+                          <p className="font-extrabold text-slate-300 border-b border-slate-800 pb-1 mb-1 uppercase tracking-wider text-[9px]">Thứ: {analyticsData[hoveredDayIdx].name}</p>
+                          <p className="flex items-center justify-between gap-2 font-bold">
+                            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>Truy cập:</span>
+                            <span className="font-mono text-blue-400">{analyticsData[hoveredDayIdx]['Lượt truy cập'].toLocaleString()}</span>
+                          </p>
+                          <p className="flex items-center justify-between gap-2 font-bold">
+                            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Check-in:</span>
+                            <span className="font-mono text-emerald-400">{analyticsData[hoveredDayIdx]['Lượt Check-in'].toLocaleString()}</span>
+                          </p>
+                          <p className="flex items-center justify-between gap-2 font-bold text-[9px] text-slate-400 pt-0.5 border-t border-slate-800">
+                            <span>Hài lòng:</span>
+                            <span className="font-mono text-slate-300">{analyticsData[hoveredDayIdx]['Độ hài lòng (%)']}%</span>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    {/* Custom Legends beneath */}
+                    <div className="flex justify-center gap-6 text-[10px] font-bold text-slate-500">
+                      <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-blue-500"></span> Lượt truy cập</span>
+                      <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-emerald-500"></span> Lượt Check-in</span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Category demand metrics */}
               <div className="space-y-4">
                 <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider text-center">Mức độ quan tâm theo danh mục</h3>
-                <div className="w-full h-64 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={categoryPopularity} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                      <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} />
-                      <YAxis stroke="#94a3b8" fontSize={11} />
-                      <Tooltip />
-                      <Legend wrapperStyle={{ fontSize: 11 }} />
-                      <Bar dataKey="Mức độ quan tâm" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={28} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                <div className="w-full h-64 bg-white p-3 rounded-xl border border-slate-100/80 shadow-2xs relative">
+                  <svg className="w-full h-full" viewBox="0 0 500 220" preserveAspectRatio="none">
+                    {/* Grid Lines */}
+                    {[0, 1000, 2000, 3000, 4000, 5000].map((val) => {
+                      const y = 185 - (val / 5000) * 160;
+                      return (
+                        <g key={val}>
+                          <line x1="45" y1={y} x2="485" y2={y} stroke="#f1f5f9" strokeWidth="1" />
+                          <text x="35" y={y + 3} textAnchor="end" className="fill-slate-400 font-bold text-[9px] font-mono">{val.toLocaleString()}</text>
+                        </g>
+                      );
+                    })}
+
+                    {/* Vertical Bars and Axis labels */}
+                    {categoryPopularity.map((cat, i) => {
+                      const colW = 440 / 6;
+                      const xCenter = 45 + i * colW + colW / 2;
+                      const barW = 24;
+                      const barX = xCenter - barW / 2;
+                      const val = cat['Mức độ quan tâm'];
+                      const barH = (val / 5000) * 160;
+                      const barY = 185 - barH;
+                      const isHovered = hoveredCatIdx === i;
+
+                      return (
+                        <g
+                          key={i}
+                          onMouseEnter={() => setHoveredCatIdx(i)}
+                          onMouseLeave={() => setHoveredCatIdx(null)}
+                          className="cursor-pointer"
+                        >
+                          {/* Background hover column highlight */}
+                          <rect
+                            x={xCenter - colW / 2}
+                            y={25}
+                            width={colW}
+                            height={160}
+                            fill={isHovered ? "rgba(59, 130, 246, 0.04)" : "transparent"}
+                            className="transition-colors duration-150"
+                          />
+                          {/* The actual styled bar */}
+                          <rect
+                            x={barX}
+                            y={barY}
+                            width={barW}
+                            height={Math.max(3, barH)}
+                            rx="4"
+                            fill={isHovered ? "#2563eb" : "#3b82f6"}
+                            className="transition-all duration-200"
+                          />
+                          {/* Category label under the axis */}
+                          <text
+                            x={xCenter}
+                            y="202"
+                            textAnchor="middle"
+                            className={`font-extrabold text-[10px] font-sans transition-colors duration-150 ${
+                              isHovered ? "fill-blue-600 font-black" : "fill-slate-400"
+                            }`}
+                          >
+                            {cat.name}
+                          </text>
+                        </g>
+                      );
+                    })}
+
+                    {/* Axis Lines */}
+                    <line x1="45" y1="185" x2="485" y2="185" stroke="#e2e8f0" strokeWidth="1" />
+                  </svg>
+
+                  {/* HTML Hover Tooltip */}
+                  {hoveredCatIdx !== null && (
+                    <div
+                      className="absolute bg-slate-900/95 backdrop-blur-xs text-white p-2.5 rounded-xl shadow-xl border border-slate-800 z-20 text-left pointer-events-none text-[10px] space-y-1 w-36 transition-all duration-150"
+                      style={{
+                        left: `${Math.min(340, Math.max(10, 45 + hoveredCatIdx * (440 / 6) + (440 / 12) - 50))}px`,
+                        top: '30px',
+                      }}
+                    >
+                      <p className="font-extrabold text-slate-300 border-b border-slate-800 pb-0.5 mb-1 uppercase tracking-wider text-[9px]">Chi tiết danh mục</p>
+                      <p className="flex items-center justify-between gap-1 font-bold">
+                        <span className="text-slate-400 font-semibold">{categoryPopularity[hoveredCatIdx].name}:</span>
+                        <span className="font-mono text-blue-400 font-extrabold">{categoryPopularity[hoveredCatIdx]['Mức độ quan tâm'].toLocaleString()}</span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+                {/* Custom Legends beneath */}
+                <div className="flex justify-center gap-6 text-[10px] font-bold text-slate-500">
+                  <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-blue-500"></span> Mức độ quan tâm (Lượt)</span>
                 </div>
               </div>
             </div>
