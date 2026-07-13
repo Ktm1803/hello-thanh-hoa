@@ -23,7 +23,9 @@ import {
   ExternalLink,
   Search,
   Upload,
-  Eye
+  Eye,
+  ArrowLeft,
+  ChevronLeft
 } from 'lucide-react';
 import { 
   getSpots, 
@@ -52,6 +54,8 @@ import ScrollReveal from './ScrollReveal';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'categories' | 'spots_articles' | 'images' | 'partners' | 'tourists'>('spots_articles');
+  const [activeArticleSubTab, setActiveArticleSubTab] = useState<'all' | 'pending' | 'travel' | 'food' | 'history' | 'beauty' | 'other'>('all');
+  const [pendingCategoryFilter, setPendingCategoryFilter] = useState<string>('all');
 
   // Load Data States
   const [categories, setCategories] = useState<AppCategory[]>([]);
@@ -132,7 +136,54 @@ export default function AdminDashboard() {
 
   // Filter lists based on search term
   const filteredSpots = spots.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.district.toLowerCase().includes(searchTerm.toLowerCase()));
-  const filteredArticles = articles.filter(a => a.title.toLowerCase().includes(searchTerm.toLowerCase()));
+  
+  // Categorize articles for subtabs and metrics
+  const pendingArticlesCount = articles.filter(a => a.approved === false).length;
+  const approvedArticles = articles.filter(a => a.approved !== false);
+
+  const getArticleGroup = (a: Article) => {
+    const cat = (a.category || '').toLowerCase();
+    if (cat === 'travel' || cat.includes('du lịch') || cat.includes('phượt') || cat.includes('cẩm nang')) {
+      return 'travel';
+    }
+    if (cat === 'food' || cat === 'cafe' || cat.includes('ẩm thực') || cat.includes('ăn')) {
+      return 'food';
+    }
+    if (cat === 'history' || cat.includes('di tích') || cat.includes('lịch sử')) {
+      return 'history';
+    }
+    if (cat === 'beauty' || cat.includes('làm đẹp') || cat.includes('sức khỏe') || cat.includes('spa')) {
+      return 'beauty';
+    }
+    return 'other';
+  };
+
+  const travelArticlesCount = approvedArticles.filter(a => getArticleGroup(a) === 'travel').length;
+  const foodArticlesCount = approvedArticles.filter(a => getArticleGroup(a) === 'food').length;
+  const historyArticlesCount = approvedArticles.filter(a => getArticleGroup(a) === 'history').length;
+  const beautyArticlesCount = approvedArticles.filter(a => getArticleGroup(a) === 'beauty').length;
+  const otherArticlesCount = approvedArticles.filter(a => getArticleGroup(a) === 'other').length;
+
+  // Filter articles list based on sub-tab
+  let baseArticles: Article[] = [];
+  if (activeArticleSubTab === 'all') {
+    baseArticles = articles;
+  } else if (activeArticleSubTab === 'pending') {
+    baseArticles = articles.filter(a => a.approved === false);
+    if (pendingCategoryFilter !== 'all') {
+      baseArticles = baseArticles.filter(a => getArticleGroup(a) === pendingCategoryFilter);
+    }
+  } else {
+    // Approved categories
+    baseArticles = approvedArticles.filter(a => getArticleGroup(a) === activeArticleSubTab);
+  }
+
+  const filteredArticles = baseArticles.filter(a => 
+    a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (a.summary && a.summary.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (a.author && a.author.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
   const filteredUsers = users.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase()));
   const filteredCategories = categories.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
@@ -413,6 +464,793 @@ export default function AdminDashboard() {
       loadData();
     }
   };
+
+  if (showSpotForm) {
+    return (
+      <div className="w-full text-left space-y-6">
+        {/* Beautiful full-page breadcrumb / header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50 border border-slate-200/50 p-4 rounded-2xl shadow-xs">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setShowSpotForm(false);
+                // Reset states
+                setSpotId('');
+                setSpotName('');
+                setSpotSubCategory('');
+                setSpotAddress('');
+                setSpotDesc('');
+                setSpotContact('');
+                setSpotFacebookLink('');
+                setSpotMapLink('');
+                setSpotHighlights('');
+                setSpotDeals('');
+                setSpotImage('');
+              }}
+              className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer shrink-0"
+              title="Quay lại danh sách"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest font-mono">Quản lý Địa điểm</span>
+                <span className="text-slate-300">/</span>
+                <span className="text-[10px] text-slate-400 font-medium">Biên tập trang riêng</span>
+              </div>
+              <h2 className="text-sm font-black text-slate-800 uppercase flex items-center gap-1.5 mt-0.5">
+                {spotId ? `✏️ Chỉnh sửa: ${spotName || 'Địa điểm'}` : '✨ Thêm địa điểm du lịch & cơ sở dịch vụ mới'}
+              </h2>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowSpotForm(false);
+                // Reset states
+                setSpotId('');
+                setSpotName('');
+                setSpotSubCategory('');
+                setSpotAddress('');
+                setSpotDesc('');
+                setSpotContact('');
+                setSpotFacebookLink('');
+                setSpotMapLink('');
+                setSpotHighlights('');
+                setSpotDeals('');
+                setSpotImage('');
+              }}
+              className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-bold transition-all cursor-pointer"
+            >
+              Hủy bỏ & Quay lại
+            </button>
+            <button
+              onClick={handleSaveSpot}
+              type="button"
+              className="px-4 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black shadow-md transition-all cursor-pointer flex items-center gap-1"
+            >
+              <Save className="w-3.5 h-3.5" /> Lưu Thay Đổi
+            </button>
+          </div>
+        </div>
+
+        {/* Edit Form grid with live preview */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          
+          {/* Main Edit Form Column */}
+          <div className="lg:col-span-2 space-y-5 bg-white border border-slate-100 rounded-3xl p-6 shadow-xs">
+            <form onSubmit={handleSaveSpot} className="space-y-6">
+              
+              {/* Section 1: Thông tin cơ bản */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider border-b pb-1 flex items-center gap-2">
+                  <Compass className="w-4 h-4 text-rose-500" /> 1. Thông tin định danh cơ bản
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Tên Địa điểm / Cơ sở *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="vd: Suối Cá Thần Cẩm Thủy..."
+                      value={spotName}
+                      onChange={e => setSpotName(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 focus:outline-hidden bg-white font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Mã định danh (ID - Tự động tạo nếu để trống)</label>
+                    <input
+                      type="text"
+                      placeholder="vd: suoi-ca-than-cam-thuy"
+                      value={spotId}
+                      disabled={!!spotId}
+                      onChange={e => setSpotId(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-slate-50 font-mono text-slate-500 font-bold"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Lĩnh vực chính *</label>
+                    <select
+                      value={spotCategory}
+                      onChange={e => setSpotCategory(e.target.value as any)}
+                      className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white font-bold text-slate-700"
+                    >
+                      <option value="travel">Địa danh Du lịch</option>
+                      <option value="food">Đặc sản Ẩm thực</option>
+                      <option value="cafe">Cà phê & Giải trí</option>
+                      <option value="hotel">Khách sạn & Resort</option>
+                      <option value="shopping">Mua sắm</option>
+                      <option value="education">Giáo dục</option>
+                      <option value="beauty">Làm đẹp & Chụp ảnh</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Danh mục phụ (Phân loại chi tiết) *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="vd: Di tích lịch sử, Quán ăn ngon, Homestay..."
+                      value={spotSubCategory}
+                      onChange={e => setSpotSubCategory(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Quận/Huyện/Thị xã xứ Thanh *</label>
+                    <select
+                      value={spotDistrict}
+                      onChange={e => setSpotDistrict(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white font-bold text-slate-700"
+                    >
+                      <option value="Thành phố Thanh Hóa">Thành phố Thanh Hóa</option>
+                      <option value="Thành phố Sầm Sơn">Thành phố Sầm Sơn</option>
+                      <option value="Thị xã Bỉm Sơn">Thị xã Bỉm Sơn</option>
+                      <option value="Thị xã Nghi Sơn">Thị xã Nghi Sơn</option>
+                      <option value="Huyện Bá Thước">Huyện Bá Thước</option>
+                      <option value="Huyện Cẩm Thủy">Huyện Cẩm Thủy</option>
+                      <option value="Huyện Đông Sơn">Huyện Đông Sơn</option>
+                      <option value="Huyện Hà Trung">Huyện Hà Trung</option>
+                      <option value="Huyện Hậu Lộc">Huyện Hậu Lộc</option>
+                      <option value="Huyện Hoằng Hóa">Huyện Hoằng Hóa</option>
+                      <option value="Huyện Lang Chánh">Huyện Lang Chánh</option>
+                      <option value="Huyện Mường Lát">Huyện Mường Lát</option>
+                      <option value="Huyện Nga Sơn">Huyện Nga Sơn</option>
+                      <option value="Huyện Ngọc Lặc">Huyện Ngọc Lặc</option>
+                      <option value="Huyện Như Thanh">Huyện Như Thanh</option>
+                      <option value="Huyện Như Xuân">Huyện Như Xuân</option>
+                      <option value="Huyện Nông Cống">Huyện Nông Cống</option>
+                      <option value="Huyện Quan Hóa">Huyện Quan Hóa</option>
+                      <option value="Huyện Quan Sơn">Huyện Quan Sơn</option>
+                      <option value="Huyện Quảng Xương">Huyện Quảng Xương</option>
+                      <option value="Huyện Thạch Thành">Huyện Thạch Thành</option>
+                      <option value="Huyện Thiệu Hóa">Huyện Thiệu Hóa</option>
+                      <option value="Huyện Thọ Xuân">Huyện Thọ Xuân</option>
+                      <option value="Huyện Thường Xuân">Huyện Thường Xuân</option>
+                      <option value="Huyện Triệu Sơn">Huyện Triệu Sơn</option>
+                      <option value="Huyện Vĩnh Lộc">Huyện Vĩnh Lộc</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Địa chỉ & Liên hệ */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider border-b pb-1 flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-rose-500" /> 2. Vị trí địa lý & Đường dây liên hệ
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Địa chỉ cụ thể *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Số nhà, tên đường, thôn, xã cụ thể..."
+                      value={spotAddress}
+                      onChange={e => setSpotAddress(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Mức giá tượng trưng</label>
+                    <select
+                      value={spotPrice}
+                      onChange={e => setSpotPrice(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white font-bold text-slate-700"
+                    >
+                      <option value="$">$ (Bình dân)</option>
+                      <option value="$$">$$ (Tầm trung)</option>
+                      <option value="$$$">$$$ (Cao cấp)</option>
+                      <option value="$$$$">$$$$ (Thượng lưu)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Giờ mở cửa / đón khách *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="vd: 08:00 - 22:30 hoặc Cả ngày"
+                      value={spotHours}
+                      onChange={e => setSpotHours(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Hotline / Số điện thoại</label>
+                    <input
+                      type="text"
+                      placeholder="vd: 0987.654.321"
+                      value={spotContact}
+                      onChange={e => setSpotContact(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Trang cá nhân / Fanpage Facebook Link</label>
+                    <input
+                      type="url"
+                      placeholder="https://facebook.com/trang-cua-ban"
+                      value={spotFacebookLink}
+                      onChange={e => setSpotFacebookLink(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Google Maps Link (Bản đồ chỉ đường)</label>
+                  <input
+                    type="url"
+                    placeholder="https://maps.app.goo.gl/... hoặc https://google.com/maps/..."
+                    value={spotMapLink}
+                    onChange={e => setSpotMapLink(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white font-mono text-[11px]"
+                  />
+                </div>
+              </div>
+
+              {/* Section 3: Hình ảnh */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider border-b pb-1 flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4 text-rose-500" /> 3. Ảnh đại diện quảng bá hình ảnh
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 border border-slate-100 rounded-2xl">
+                  {/* Upload */}
+                  <div className="flex flex-col justify-center items-center p-4 border border-dashed border-slate-200 rounded-xl bg-white hover:bg-slate-50/50 transition-colors relative group min-h-[120px]">
+                    <Upload className="w-6 h-6 text-slate-400 mb-2 group-hover:text-blue-500 transition-colors" />
+                    <p className="text-[11px] font-bold text-slate-600">Chọn tệp ảnh từ thiết bị</p>
+                    <p className="text-[9px] text-slate-400 mt-0.5">Hỗ trợ ảnh cực nét lên tới 15MB</p>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => handleImageFileChange(e, setSpotImage)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </div>
+
+                  {/* URL input and mini preview */}
+                  <div className="space-y-3 flex flex-col justify-between">
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Hoặc dán link ảnh từ Unsplash/Web</label>
+                      <input
+                        type="url"
+                        placeholder="https://images.unsplash.com/photo-..."
+                        value={spotImage}
+                        onChange={e => setSpotImage(e.target.value)}
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
+                      />
+                    </div>
+                    {spotImage && (
+                      <div className="flex items-center gap-2.5 bg-white p-2 border border-slate-100 rounded-xl">
+                        <img src={spotImage} alt="Preview" className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-bold text-slate-700 truncate">Ảnh đã liên kết</p>
+                          <button
+                            type="button"
+                            onClick={() => setSpotImage('')}
+                            className="text-[9px] text-rose-500 hover:underline cursor-pointer font-extrabold"
+                          >
+                            Xóa ảnh
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 4: Mô tả & Chi tiết */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider border-b pb-1 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-rose-500" /> 4. Mô tả chi tiết & Điểm nhấn đặc trưng
+                </h4>
+                <div>
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Lời giới thiệu/Mô tả tổng quan *</label>
+                  <textarea
+                    required
+                    rows={4}
+                    placeholder="Mô tả chi tiết những nét thu hút nhất của địa điểm, lịch sử, không gian, phong cách phục vụ..."
+                    value={spotDesc}
+                    onChange={e => setSpotDesc(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white leading-relaxed font-medium"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Điểm nổi bật / Điểm cộng (Mỗi dòng một ý)</label>
+                    <textarea
+                      rows={4}
+                      placeholder="vd:&#10;Canh đón bình minh lãng mạn nhất xứ Thanh&#10;Hỗ trợ mượn trang phục dân tộc miễn phí&#10;Có hướng dẫn viên nhiệt tình tại chỗ"
+                      value={spotHighlights}
+                      onChange={e => setSpotHighlights(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Các ưu đãi đặc biệt / Hot Deals (Mỗi dòng một ý)</label>
+                    <textarea
+                      rows={4}
+                      placeholder="vd:&#10;Giảm 10% khi đặt trước 1 ngày&#10;Miễn phí đồ tráng miệng chuẩn địa phương"
+                      value={spotDeals}
+                      onChange={e => setSpotDeals(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white font-medium"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions Footer */}
+              <div className="flex gap-2.5 justify-end pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSpotForm(false);
+                    // Reset states
+                    setSpotId('');
+                    setSpotName('');
+                    setSpotSubCategory('');
+                    setSpotAddress('');
+                    setSpotDesc('');
+                    setSpotContact('');
+                    setSpotFacebookLink('');
+                    setSpotMapLink('');
+                    setSpotHighlights('');
+                    setSpotDeals('');
+                    setSpotImage('');
+                  }}
+                  className="px-5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-bold transition-all cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 rounded-xl bg-slate-950 hover:bg-slate-900 text-white text-xs font-black shadow-lg shadow-slate-900/10 transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Save className="w-4 h-4" /> Lưu thông tin & Xuất bản
+                </button>
+              </div>
+
+            </form>
+          </div>
+
+          {/* Real-time Live Preview Column */}
+          <div className="lg:col-span-1 space-y-4 lg:sticky lg:top-6">
+            <div className="flex items-center justify-between">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                👁️ Trực quan hóa Live Preview
+              </h4>
+              <span className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Thời gian thực
+              </span>
+            </div>
+
+            <div className="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-md group transition-all duration-300 hover:shadow-lg">
+              {/* Card Image */}
+              <div className="relative h-44 overflow-hidden bg-slate-100">
+                <img
+                  src={spotImage || 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=600&h=400&q=80'}
+                  alt="Live Preview"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+                  <span className="px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-widest rounded-md bg-rose-500 text-white shadow-3xs">
+                    {spotCategory === 'travel' ? '🏔️ Du lịch' : 
+                     spotCategory === 'food' ? '🍜 Ẩm thực' :
+                     spotCategory === 'cafe' ? '☕ Cafe' :
+                     spotCategory === 'hotel' ? '🏨 Khách sạn' :
+                     spotCategory === 'beauty' ? '💆 Làm đẹp & Spa' : '🏷️ Dịch vụ'}
+                  </span>
+                  <span className="px-2 py-0.5 text-[8px] font-extrabold bg-slate-900/80 text-white rounded-md backdrop-blur-3xs">
+                    {spotDistrict}
+                  </span>
+                </div>
+
+                <div className="absolute bottom-3 right-3 bg-white/95 px-2 py-0.5 rounded-md backdrop-blur-3xs flex items-center gap-1 text-[9px] font-black text-slate-800 shadow-3xs">
+                  <span className="text-amber-500">★</span> 5.0
+                </div>
+              </div>
+
+              {/* Card Details */}
+              <div className="p-4 space-y-3 text-left">
+                <div>
+                  <span className="text-[8px] font-extrabold text-rose-500 uppercase tracking-widest">{spotSubCategory || 'PHÂN LOẠI CHI TIẾT'}</span>
+                  <h3 className="text-xs font-black text-slate-800 line-clamp-1 mt-0.5 uppercase tracking-tight">
+                    {spotName || 'TÊN ĐỊA ĐIỂM CHƯA NHẬP'}
+                  </h3>
+                  <p className="text-[9px] text-slate-400 font-light line-clamp-1 mt-1 flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-rose-400 shrink-0" /> {spotAddress || 'Chưa nhập địa chỉ cụ thể'}
+                  </p>
+                </div>
+
+                {/* Badges / Small details */}
+                <div className="grid grid-cols-2 gap-2 border-y border-slate-50 py-2 text-[9px] text-slate-500 font-bold">
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-slate-400" /> {spotHours || 'Cả ngày'}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <DollarSign className="w-3 h-3 text-slate-400" /> Giá: <span className="text-slate-700 font-black">{spotPrice}</span>
+                  </div>
+                </div>
+
+                {/* Short Description */}
+                <p className="text-[9px] text-slate-500 font-light line-clamp-2 leading-relaxed italic">
+                  {spotDesc || 'Lời mô tả tóm tắt của địa điểm sẽ hiển thị tại đây khi quản trị viên điền thông tin...'}
+                </p>
+
+                {/* Highlights */}
+                {spotHighlights && (
+                  <div className="space-y-1 bg-slate-50/50 p-2 border border-slate-100 rounded-xl">
+                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-wider">🌟 ĐIỂM NỔI BẬT:</p>
+                    <ul className="text-[8px] text-slate-600 font-medium space-y-0.5 list-disc pl-3">
+                      {spotHighlights.split('\n').filter(h => h.trim() !== '').slice(0, 3).map((item, idx) => (
+                        <li key={idx} className="line-clamp-1">{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Deals */}
+                {spotDeals && (
+                  <div className="bg-rose-50/40 p-2 border border-rose-100/30 rounded-xl">
+                    <p className="text-[8px] font-black text-rose-600 uppercase tracking-wider flex items-center gap-1">
+                      🔥 ƯU ĐÃI KHUYẾN MÃI:
+                    </p>
+                    <ul className="text-[8px] text-rose-700 font-bold space-y-0.5 list-disc pl-3 mt-0.5">
+                      {spotDeals.split('\n').filter(d => d.trim() !== '').slice(0, 2).map((item, idx) => (
+                        <li key={idx} className="line-clamp-1">{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="bg-indigo-50/40 border border-indigo-100/30 p-4 rounded-3xl space-y-1.5 text-left">
+              <h5 className="text-[10px] font-black text-indigo-800 uppercase tracking-wider">💡 Hướng dẫn biên soạn</h5>
+              <p className="text-[9px] text-indigo-700 font-medium leading-relaxed">
+                Nên chọn ảnh chất lượng HD/Full HD. Mô tả hấp dẫn, khách quan sẽ gia tăng lượng du khách lưu trữ & check-in địa điểm trên app HELLO THANH HÓA.
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
+  if (showArticleForm) {
+    return (
+      <div className="w-full text-left space-y-6 animate-fadeIn">
+        {/* Beautiful full-page breadcrumb / header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50 border border-slate-200/50 p-4 rounded-2xl shadow-xs">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setShowArticleForm(false);
+                // Reset states
+                setArtId('');
+                setArtTitle('');
+                setArtSummary('');
+                setArtContent('');
+                setArtImage('');
+                setArtFacebookLink('');
+              }}
+              className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer shrink-0"
+              title="Quay lại danh sách"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest font-mono">Quản lý Bài viết</span>
+                <span className="text-slate-300">/</span>
+                <span className="text-[10px] text-slate-400 font-medium">Biên tập trang riêng</span>
+              </div>
+              <h2 className="text-sm font-black text-slate-800 uppercase flex items-center gap-1.5 mt-0.5">
+                {artId ? `✏️ Chỉnh sửa: ${artTitle || 'Bài viết'}` : '✨ Soạn thảo bài viết SEO & Cẩm nang du lịch mới'}
+              </h2>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowArticleForm(false);
+                // Reset states
+                setArtId('');
+                setArtTitle('');
+                setArtSummary('');
+                setArtContent('');
+                setArtImage('');
+                setArtFacebookLink('');
+              }}
+              className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-bold transition-all cursor-pointer"
+            >
+              Hủy bỏ & Quay lại
+            </button>
+            <button
+              onClick={handleSaveArticle}
+              type="button"
+              className="px-4 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black shadow-md transition-all cursor-pointer flex items-center gap-1"
+            >
+              <Save className="w-3.5 h-3.5" /> Lưu & Xuất Bản
+            </button>
+          </div>
+        </div>
+
+        {/* Edit Form grid with live preview */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          
+          {/* Main Edit Form Column */}
+          <div className="lg:col-span-2 space-y-5 bg-white border border-slate-100 rounded-3xl p-6 shadow-xs">
+            <form onSubmit={handleSaveArticle} className="space-y-6">
+              
+              {/* Section 1: Thông tin cơ bản */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider border-b pb-1 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-rose-500" /> 1. Nội dung tiêu đề & danh mục bài viết
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Tiêu đề bài viết *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="vd: Cẩm nang du lịch Thác Ma Hao Thường Xuân chi tiết nhất..."
+                      value={artTitle}
+                      onChange={e => setArtTitle(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 focus:outline-hidden bg-white font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Phân mục bài đăng *</label>
+                    <select
+                      value={artCategory}
+                      onChange={e => setArtCategory(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white font-bold text-slate-700"
+                    >
+                      <option value="Du lịch">Du lịch & Bản đồ</option>
+                      <option value="Ẩm thực">Ẩm thực đường phố</option>
+                      <option value="Cẩm nang phượt">Cẩm nang phượt & Check-in</option>
+                      <option value="Di tích lịch sử">Di tích lịch sử cổ kính</option>
+                      <option value="Làm đẹp & Sức khỏe">Spa dưỡng sinh & Chữa lành</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Tác giả bài viết *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="vd: Ban Biên Tập, Hello Thanh Hóa..."
+                      value={artAuthor}
+                      onChange={e => setArtAuthor(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Liên kết Facebook của Tác giả / Đơn vị</label>
+                    <input
+                      type="url"
+                      placeholder="https://facebook.com/trang-cua-tác-giả..."
+                      value={artFacebookLink}
+                      onChange={e => setArtFacebookLink(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white font-medium"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Hình ảnh */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider border-b pb-1 flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4 text-rose-500" /> 2. Ảnh bài viết đại diện
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 border border-slate-100 rounded-2xl">
+                  {/* Upload */}
+                  <div className="flex flex-col justify-center items-center p-4 border border-dashed border-slate-200 rounded-xl bg-white hover:bg-slate-50/50 transition-colors relative group min-h-[120px]">
+                    <Upload className="w-6 h-6 text-slate-400 mb-2 group-hover:text-blue-500 transition-colors" />
+                    <p className="text-[11px] font-bold text-slate-600">Chọn tệp ảnh từ thiết bị</p>
+                    <p className="text-[9px] text-slate-400 mt-0.5">Tải lên ảnh sắc nét, định dạng JPG/PNG/WEBP</p>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => handleImageFileChange(e, setArtImage)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </div>
+
+                  {/* URL Input */}
+                  <div className="space-y-3 flex flex-col justify-between">
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Hoặc dán link ảnh trực tuyến</label>
+                      <input
+                        type="url"
+                        placeholder="https://images.unsplash.com/photo-..."
+                        value={artImage}
+                        onChange={e => setArtImage(e.target.value)}
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
+                      />
+                    </div>
+                    {artImage && (
+                      <div className="flex items-center gap-2.5 bg-white p-2 border border-slate-100 rounded-xl">
+                        <img src={artImage} alt="Preview" className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-bold text-slate-700 truncate">Ảnh đã liên kết</p>
+                          <button
+                            type="button"
+                            onClick={() => setArtImage('')}
+                            className="text-[9px] text-rose-500 hover:underline cursor-pointer font-extrabold"
+                          >
+                            Xóa ảnh
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Mô tả ngắn & Nội dung chi tiết */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider border-b pb-1 flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-rose-500" /> 3. Mô tả tóm tắt ngắn & Soạn thảo nội dung
+                </h4>
+                <div>
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Lời giới thiệu ngắn (Tóm tắt hiển thị ở danh sách bài viết) *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Mô tả tóm tắt cực kỳ lôi cuốn dài khoảng 1-2 câu ngắn..."
+                    value={artSummary}
+                    onChange={e => setArtSummary(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white leading-relaxed font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Nội dung chi tiết (Được tự động định dạng đoạn văn qua dấu xuống dòng) *</label>
+                  <textarea
+                    required
+                    rows={12}
+                    placeholder="Viết tất cả thông tin bổ ích cho bài viết tại đây. Hãy phân bố các phần bằng cách xuống dòng để người đọc dễ theo dõi..."
+                    value={artContent}
+                    onChange={e => setArtContent(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white leading-relaxed font-medium"
+                  />
+                </div>
+              </div>
+
+              {/* Actions Footer */}
+              <div className="flex gap-2.5 justify-end pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowArticleForm(false);
+                    // Reset states
+                    setArtId('');
+                    setArtTitle('');
+                    setArtSummary('');
+                    setArtContent('');
+                    setArtImage('');
+                    setArtFacebookLink('');
+                  }}
+                  className="px-5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-bold transition-all cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 rounded-xl bg-slate-950 hover:bg-slate-900 text-white text-xs font-black shadow-lg shadow-slate-900/10 transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Save className="w-4 h-4" /> Lưu & Xuất Bản
+                </button>
+              </div>
+
+            </form>
+          </div>
+
+          {/* Real-time Live Preview Column */}
+          <div className="lg:col-span-1 space-y-4 lg:sticky lg:top-6">
+            <div className="flex items-center justify-between">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                👁️ Xem trước bài đăng (Live Card Preview)
+              </h4>
+              <span className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Thời gian thực
+              </span>
+            </div>
+
+            <div className="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-md group transition-all duration-300 hover:shadow-lg">
+              {/* Card Image */}
+              <div className="relative h-44 overflow-hidden bg-slate-100">
+                <img
+                  src={artImage || 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=600&h=400&q=80'}
+                  alt="Live Preview"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute top-3 left-3">
+                  <span className="px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-widest rounded-md bg-blue-500 text-white shadow-3xs">
+                    {artCategory || 'Du lịch'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Card Details */}
+              <div className="p-4 space-y-3 text-left">
+                <div className="flex items-center gap-2 text-[9px] text-slate-400 font-extrabold">
+                  <span>👤 {artAuthor || 'Người viết'}</span>
+                  <span>•</span>
+                  <span>📅 {new Date().toISOString().split('T')[0]}</span>
+                </div>
+
+                <div>
+                  <h3 className="text-xs font-black text-slate-800 line-clamp-2 uppercase tracking-tight mt-0.5">
+                    {artTitle || 'TIÊU ĐỀ BÀI VIẾT CHƯA NHẬP'}
+                  </h3>
+                  <p className="text-[10px] text-slate-500 font-light line-clamp-2 mt-1 flex items-center gap-1 leading-relaxed">
+                    {artSummary || 'Lời giới thiệu tóm tắt của bài viết sẽ hiển thị tại đây khi bạn nhập nội dung...'}
+                  </p>
+                </div>
+
+                <div className="pt-2 border-t border-slate-50 flex items-center justify-between text-[10px]">
+                  <span className="text-slate-400 font-medium">⏱️ 5 phút đọc</span>
+                  <span className="text-blue-600 font-bold hover:underline flex items-center gap-1">
+                    Đọc tiếp <ArrowLeft className="w-3 h-3 rotate-180" />
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-indigo-50/40 border border-indigo-100/30 p-4 rounded-3xl space-y-2 text-left">
+              <h5 className="text-[10px] font-black text-indigo-800 uppercase tracking-wider">💡 Xem trước chi tiết bài viết</h5>
+              <div className="space-y-1 bg-white p-3 rounded-xl border border-slate-100/80 max-h-[220px] overflow-y-auto">
+                <h6 className="text-[11px] font-bold text-slate-800 line-clamp-1">{artTitle || 'Tiêu đề bài viết'}</h6>
+                <p className="text-[9px] text-slate-500 leading-relaxed whitespace-pre-line font-medium">
+                  {artContent || 'Nội dung chi tiết...'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full text-left space-y-6">
@@ -708,390 +1546,7 @@ export default function AdminDashboard() {
         </form>
       )}
 
-      {showSpotForm && (
-        <form onSubmit={handleSaveSpot} className="bg-slate-50 border border-slate-200/60 rounded-2xl p-6 space-y-4">
-          <h3 className="font-extrabold text-sm text-slate-800 flex items-center gap-1.5">
-            <MapPin className="w-4 h-4 text-rose-500" /> Điền thông tin Địa điểm Du lịch / Cơ sở kinh doanh
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Tên Địa điểm / Cơ sở</label>
-              <input
-                type="text"
-                required
-                placeholder="vd: Suối Cá Thần Cẩm Thủy..."
-                value={spotName}
-                onChange={e => setSpotName(e.target.value)}
-                className="w-full px-3.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Danh mục Lĩnh vực</label>
-              <select
-                value={spotCategory}
-                onChange={e => setSpotCategory(e.target.value as any)}
-                className="w-full px-3.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white font-bold"
-              >
-                <option value="travel">Địa danh Du lịch</option>
-                <option value="food">Đặc sản Ẩm thực</option>
-                <option value="cafe">Cà phê & Giải trí</option>
-                <option value="hotel">Khách sạn & Resort</option>
-                <option value="shopping">Mua sắm</option>
-                <option value="education">Giáo dục</option>
-                <option value="beauty">Làm đẹp & Chụp ảnh</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Danh mục phụ (Phân loại chi tiết)</label>
-              <input
-                type="text"
-                required
-                placeholder="vd: Di tích lịch sử, Nhà hàng, Quán ăn, Spa dưỡng sinh..."
-                value={spotSubCategory}
-                onChange={e => setSpotSubCategory(e.target.value)}
-                className="w-full px-3.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Huyện/Thị xã xứ Thanh</label>
-              <select
-                value={spotDistrict}
-                onChange={e => setSpotDistrict(e.target.value)}
-                className="w-full px-3.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white font-bold"
-              >
-                <option value="Thành phố Thanh Hóa">Thành phố Thanh Hóa</option>
-                <option value="Thành phố Sầm Sơn">Thành phố Sầm Sơn</option>
-                <option value="Thị xã Bỉm Sơn">Thị xã Bỉm Sơn</option>
-                <option value="Thị xã Nghi Sơn">Thị xã Nghi Sơn</option>
-                <option value="Huyện Bá Thước">Huyện Bá Thước</option>
-                <option value="Huyện Cẩm Thủy">Huyện Cẩm Thủy</option>
-                <option value="Huyện Đông Sơn">Huyện Đông Sơn</option>
-                <option value="Huyện Hà Trung">Huyện Hà Trung</option>
-                <option value="Huyện Hậu Lộc">Huyện Hậu Lộc</option>
-                <option value="Huyện Hoằng Hóa">Huyện Hoằng Hóa</option>
-                <option value="Huyện Lang Chánh">Huyện Lang Chánh</option>
-                <option value="Huyện Mường Lát">Huyện Mường Lát</option>
-                <option value="Huyện Nga Sơn">Huyện Nga Sơn</option>
-                <option value="Huyện Ngọc Lặc">Huyện Ngọc Lặc</option>
-                <option value="Huyện Như Thanh">Huyện Như Thanh</option>
-                <option value="Huyện Như Xuân">Huyện Như Xuân</option>
-                <option value="Huyện Nông Cống">Huyện Nông Cống</option>
-                <option value="Huyện Quan Hóa">Huyện Quan Hóa</option>
-                <option value="Huyện Quan Sơn">Huyện Quan Sơn</option>
-                <option value="Huyện Quảng Xương">Huyện Quảng Xương</option>
-                <option value="Huyện Thạch Thành">Huyện Thạch Thành</option>
-                <option value="Huyện Thiệu Hóa">Huyện Thiệu Hóa</option>
-                <option value="Huyện Thọ Xuân">Huyện Thọ Xuân</option>
-                <option value="Huyện Thường Xuân">Huyện Thường Xuân</option>
-                <option value="Huyện Triệu Sơn">Huyện Triệu Sơn</option>
-                <option value="Huyện Vĩnh Lộc">Huyện Vĩnh Lộc</option>
-              </select>
-            </div>
-            <div className="col-span-2">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Địa chỉ chính xác</label>
-              <input
-                type="text"
-                required
-                placeholder="Số nhà, tên đường, phường/xã cụ thể..."
-                value={spotAddress}
-                onChange={e => setSpotAddress(e.target.value)}
-                className="w-full px-3.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Mức Giá phân khúc</label>
-              <select
-                value={spotPrice}
-                onChange={e => setSpotPrice(e.target.value)}
-                className="w-full px-3.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white font-bold"
-              >
-                <option value="$">$ (Bình dân)</option>
-                <option value="$$">$$ (Tầm trung)</option>
-                <option value="$$$">$$$ (Cao cấp)</option>
-                <option value="$$$$">$$$$ (Thượng lưu)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Giờ mở cửa</label>
-              <input
-                type="text"
-                required
-                placeholder="vd: 08:00 - 22:30"
-                value={spotHours}
-                onChange={e => setSpotHours(e.target.value)}
-                className="w-full px-3.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
-              />
-            </div>
-             <div>
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Số điện thoại liên hệ</label>
-              <input
-                type="text"
-                placeholder="Số Hotline hỗ trợ"
-                value={spotContact}
-                onChange={e => setSpotContact(e.target.value)}
-                className="w-full px-3.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Liên kết Facebook liên hệ</label>
-              <input
-                type="url"
-                placeholder="https://facebook.com/trang-cua-ban"
-                value={spotFacebookLink}
-                onChange={e => setSpotFacebookLink(e.target.value)}
-                className="w-full px-3.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
-              />
-            </div>
-            <div className="col-span-3">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Đường dẫn Bản đồ chỉ đường (Google Maps Link)</label>
-              <input
-                type="url"
-                placeholder="https://maps.app.goo.gl/... hoặc https://google.com/maps/..."
-                value={spotMapLink}
-                onChange={e => setSpotMapLink(e.target.value)}
-                className="w-full px-3.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
-              />
-            </div>
-            <div className="col-span-3 border border-slate-200 border-dashed rounded-xl p-4 bg-white/50 space-y-3">
-              <span className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Hình ảnh Địa điểm (Gắn link hoặc Tải ảnh lên) *</span>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Upload Section */}
-                <div className="flex flex-col justify-center items-center p-4 border border-slate-200 rounded-lg bg-slate-50 hover:bg-slate-100/75 transition-colors relative group min-h-[110px]">
-                  <Upload className="w-6 h-6 text-slate-400 mb-2 group-hover:text-blue-500 transition-colors" />
-                  <p className="text-[11px] font-bold text-slate-600">Chọn tệp ảnh từ thiết bị</p>
-                  <p className="text-[9px] text-slate-400 mt-0.5">Ảnh chất lượng cao, tối đa 15MB</p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={e => handleImageFileChange(e, setSpotImage)}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                </div>
 
-                {/* URL Paste & Preview Section */}
-                <div className="space-y-3 flex flex-col justify-between">
-                  <div>
-                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Hoặc dán Đường dẫn (URL) ảnh</label>
-                    <input
-                      type="url"
-                      placeholder="https://images.unsplash.com/photo-..."
-                      value={spotImage}
-                      onChange={e => setSpotImage(e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
-                    />
-                  </div>
-                  
-                  {spotImage && (
-                    <div className="flex items-center gap-3 bg-white p-2 border border-slate-100 rounded-lg">
-                      <img src={spotImage} alt="Preview" className="w-10 h-10 rounded object-cover border border-slate-200 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-bold text-slate-700 truncate">Ảnh đã chọn</p>
-                        <button
-                          type="button"
-                          onClick={() => setSpotImage('')}
-                          className="text-[9px] text-rose-500 hover:underline cursor-pointer font-bold"
-                        >
-                          Xóa ảnh
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="col-span-3">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Mô tả chi tiết</label>
-              <textarea
-                required
-                rows={3}
-                placeholder="Nêu rõ nét nổi bật, giới thiệu và định hình không gian cơ sở..."
-                value={spotDesc}
-                onChange={e => setSpotDesc(e.target.value)}
-                className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
-              />
-            </div>
-            <div className="col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Điểm nổi bật (Mỗi dòng một ý)</label>
-                <textarea
-                  rows={3}
-                  placeholder="Canh giờ đón bình minh đẹp nhất&#10;Hỗ trợ flycam quay phim miễn phí&#10;Chỗ để xe rộng rãi"
-                  value={spotHighlights}
-                  onChange={e => setSpotHighlights(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Các ưu đãi / Hot Deals (Mỗi dòng một ý - Không bắt buộc)</label>
-                <textarea
-                  rows={3}
-                  placeholder="Giảm 10% khi đặt trước qua cổng&#10;Miễn phí đồ uống khai vị cho nhóm 5 người"
-                  value={spotDeals}
-                  onChange={e => setSpotDeals(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-2 justify-end">
-            <button
-              type="submit"
-              className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-            >
-              <Save className="w-3.5 h-3.5" /> Lưu địa điểm
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowSpotForm(false)}
-              className="px-4 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-bold transition-all cursor-pointer"
-            >
-              Hủy
-            </button>
-          </div>
-        </form>
-      )}
-
-      {showArticleForm && (
-        <form onSubmit={handleSaveArticle} className="bg-slate-50 border border-slate-200/60 rounded-2xl p-6 space-y-4">
-          <h3 className="font-extrabold text-sm text-slate-800 flex items-center gap-1.5">
-            <FileText className="w-4 h-4 text-rose-500" /> Viết bài viết SEO & Cẩm nang phượt
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="col-span-2">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Tiêu đề bài viết</label>
-              <input
-                type="text"
-                required
-                placeholder="vd: Cẩm nang ăn bét nhè ẩm thực Sầm Sơn chỉ với 300k..."
-                value={artTitle}
-                onChange={e => setArtTitle(e.target.value)}
-                className="w-full px-3.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Phân mục bài đăng</label>
-              <select
-                value={artCategory}
-                onChange={e => setArtCategory(e.target.value)}
-                className="w-full px-3.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white font-bold"
-              >
-                <option value="Du lịch">Du lịch & Bản đồ</option>
-                <option value="Ẩm thực">Ẩm thực đường phố</option>
-                <option value="Cẩm nang phượt">Cẩm nang phượt & Check-in</option>
-                <option value="Di tích lịch sử">Di tích lịch sử cổ kính</option>
-                <option value="Làm đẹp & Sức khỏe">Spa dưỡng sinh & Chữa lành</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Tên tác giả viết bài</label>
-              <input
-                type="text"
-                required
-                placeholder="vd: Ban Biên Tập, Travel Blogger..."
-                value={artAuthor}
-                onChange={e => setArtAuthor(e.target.value)}
-                className="w-full px-3.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
-              />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Liên kết Facebook của Tác giả / Đơn vị</label>
-              <input
-                type="url"
-                placeholder="https://facebook.com/tieu-su"
-                value={artFacebookLink}
-                onChange={e => setArtFacebookLink(e.target.value)}
-                className="w-full px-3.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
-              />
-            </div>
-
-            <div className="col-span-3 border border-slate-200 border-dashed rounded-xl p-4 bg-white/50 space-y-3">
-              <span className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Hình ảnh Bài viết (Gắn link hoặc Tải ảnh lên) *</span>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Upload Section */}
-                <div className="flex flex-col justify-center items-center p-4 border border-slate-200 rounded-lg bg-slate-50 hover:bg-slate-100/75 transition-colors relative group min-h-[110px]">
-                  <Upload className="w-6 h-6 text-slate-400 mb-2 group-hover:text-blue-500 transition-colors" />
-                  <p className="text-[11px] font-bold text-slate-600">Chọn tệp ảnh bài viết</p>
-                  <p className="text-[9px] text-slate-400 mt-0.5">Ảnh chất lượng cao, tối đa 15MB</p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={e => handleImageFileChange(e, setArtImage)}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                </div>
-
-                {/* URL Paste & Preview Section */}
-                <div className="space-y-3 flex flex-col justify-between">
-                  <div>
-                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Hoặc dán Đường dẫn (URL) ảnh</label>
-                    <input
-                      type="url"
-                      placeholder="https://images.unsplash.com/photo-..."
-                      value={artImage}
-                      onChange={e => setArtImage(e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
-                    />
-                  </div>
-                  
-                  {artImage && (
-                    <div className="flex items-center gap-3 bg-white p-2 border border-slate-100 rounded-lg">
-                      <img src={artImage} alt="Preview" className="w-10 h-10 rounded object-cover border border-slate-200 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-bold text-slate-700 truncate">Ảnh đã chọn</p>
-                        <button
-                          type="button"
-                          onClick={() => setArtImage('')}
-                          className="text-[9px] text-rose-500 hover:underline cursor-pointer font-bold"
-                        >
-                          Xóa ảnh
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="col-span-3">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Tóm tắt ngắn gọn (Dùng hiển thị ở trang chủ/danh sách)</label>
-              <input
-                type="text"
-                placeholder="Tóm tắt ngắn 1-2 câu lôi cuốn..."
-                value={artSummary}
-                onChange={e => setArtSummary(e.target.value)}
-                className="w-full px-3.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white"
-              />
-            </div>
-            <div className="col-span-3">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Nội dung chi tiết bài viết (Hỗ trợ định dạng xuống dòng và văn phong chuyên nghiệp)</label>
-              <textarea
-                required
-                rows={10}
-                placeholder="Viết nội dung phong phú ở đây..."
-                value={artContent}
-                onChange={e => setArtContent(e.target.value)}
-                className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 focus:outline-hidden bg-white leading-relaxed"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2 justify-end">
-            <button
-              type="submit"
-              className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-            >
-              <Save className="w-3.5 h-3.5" /> Xuất bản bài viết
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowArticleForm(false)}
-              className="px-4 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-bold transition-all cursor-pointer"
-            >
-              Hủy
-            </button>
-          </div>
-        </form>
-      )}
 
       {showImageForm && (
         <form onSubmit={handleAddImage} className="bg-slate-50 border border-slate-200/60 rounded-2xl p-6 space-y-4">
@@ -1302,92 +1757,263 @@ export default function AdminDashboard() {
             </div>
 
             {/* ARTICLES SUBSECTION */}
-            <div className="space-y-4 pt-4 border-t border-slate-100">
-              <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider border-b pb-1.5 flex items-center gap-2">
-                📰 DANH SÁCH BÀI VIẾT QUẢNG BÁ SEO ({filteredArticles.length})
-              </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-100 text-slate-400 font-bold">
-                      <th className="pb-3 pl-2">Hình đại diện</th>
-                      <th className="pb-3">Tiêu Đề Bài Báo</th>
-                      <th className="pb-3">Phân Mục</th>
-                      <th className="pb-3">Người Viết</th>
-                      <th className="pb-3">Thời gian</th>
-                      <th className="pb-3 text-center">Trạng Thái</th>
-                      <th className="pb-3 text-right pr-2">Thao Tác</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {filteredArticles.map(art => (
-                      <tr key={art.id} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className="py-3 pl-2">
-                          <img src={art.image} alt={art.title} className="w-11 h-8 object-cover rounded-md border border-slate-100" />
-                        </td>
-                        <td className="py-3">
-                          <div className="max-w-md">
-                            <p className="font-extrabold text-slate-800 line-clamp-1">{art.title}</p>
-                            <p className="text-[10px] text-slate-400 font-light mt-0.5 line-clamp-1">{art.summary}</p>
-                          </div>
-                        </td>
-                        <td className="py-3">
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
-                            {art.category}
-                          </span>
-                        </td>
-                        <td className="py-3 text-slate-500 font-bold">{art.author}</td>
-                        <td className="py-3 text-slate-400 font-light">{art.date}</td>
-                        <td className="py-3 text-center">
-                          {art.approved === false ? (
-                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100 uppercase">
-                              Chờ duyệt
-                            </span>
-                          ) : (
-                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase">
-                              Hoạt động
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 text-right pr-2">
-                          <div className="flex justify-end gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
-                            {art.approved === false && (
-                              <button
-                                onClick={() => handleApproveArticle(art)}
-                                className="px-2 py-0.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition-all cursor-pointer"
-                                title="Phê duyệt bài viết lên Web"
-                              >
-                                Phê duyệt
-                              </button>
-                            )}
-                            <button
-                              onClick={() => setPreviewArticle(art)}
-                              className="p-1.5 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors cursor-pointer"
-                              title="Xem trước bài viết"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleEditArticle(art)}
-                              className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors cursor-pointer"
-                              title="Sửa bài viết"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteArticle(art.id)}
-                              className="p-1.5 hover:bg-rose-50 text-rose-500 rounded-lg transition-colors cursor-pointer"
-                              title="Xóa bài viết"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div className="space-y-5 pt-6 border-t border-slate-100">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b pb-3">
+                <div>
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    📰 QUẢN LÝ BÀI VIẾT QUẢNG BÁ ({articles.length})
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-light mt-0.5">
+                    Phân nhóm theo các danh mục chính thức, quản lý trạng thái hiển thị & quy trình phê duyệt bài viết đối tác.
+                  </p>
+                </div>
+                
+                {/* Clear Active Filters Quick Stat */}
+                {searchTerm && (
+                  <div className="text-[10px] text-slate-500 font-medium">
+                    Tìm thấy <span className="font-bold text-slate-800">{filteredArticles.length}</span> kết quả phù hợp từ khóa.
+                  </div>
+                )}
               </div>
+
+              {/* Main Article Category Tabs Row */}
+              <div className="flex flex-wrap gap-1.5 bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => { setActiveArticleSubTab('all'); setPendingCategoryFilter('all'); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    activeArticleSubTab === 'all' 
+                      ? 'bg-slate-900 text-white shadow-xs' 
+                      : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900'
+                  }`}
+                >
+                  🌐 Tất cả ({articles.length})
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => { setActiveArticleSubTab('pending'); setPendingCategoryFilter('all'); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer relative flex items-center gap-1.5 ${
+                    activeArticleSubTab === 'pending' 
+                      ? 'bg-amber-600 text-white shadow-xs' 
+                      : 'bg-amber-50 text-amber-700 hover:bg-amber-100/80'
+                  }`}
+                >
+                  ⏳ Chờ duyệt ({pendingArticlesCount})
+                  {pendingArticlesCount > 0 && (
+                    <span className="flex h-2 w-2 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveArticleSubTab('travel')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    activeArticleSubTab === 'travel' 
+                      ? 'bg-blue-600 text-white shadow-xs' 
+                      : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900'
+                  }`}
+                >
+                  🏔️ Du lịch ({travelArticlesCount})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveArticleSubTab('food')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    activeArticleSubTab === 'food' 
+                      ? 'bg-emerald-600 text-white shadow-xs' 
+                      : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900'
+                  }`}
+                >
+                  🍜 Ẩm thực ({foodArticlesCount})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveArticleSubTab('history')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    activeArticleSubTab === 'history' 
+                      ? 'bg-purple-600 text-white shadow-xs' 
+                      : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900'
+                  }`}
+                >
+                  🏛️ Di tích ({historyArticlesCount})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveArticleSubTab('beauty')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    activeArticleSubTab === 'beauty' 
+                      ? 'bg-rose-600 text-white shadow-xs' 
+                      : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900'
+                  }`}
+                >
+                  💆 Sức khỏe & Spa ({beautyArticlesCount})
+                </button>
+
+                {otherArticlesCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveArticleSubTab('other')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                      activeArticleSubTab === 'other' 
+                        ? 'bg-slate-600 text-white shadow-xs' 
+                        : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900'
+                    }`}
+                  >
+                    🏷️ Khác ({otherArticlesCount})
+                  </button>
+                )}
+              </div>
+
+              {/* PENDING SPECIFIC SUB-CATEGORIES LIST (Requirement: các bài xét duyệt thì nằm mục xét duyệt chia thành các danh mục nhưng chưa đăng) */}
+              {activeArticleSubTab === 'pending' && (
+                <div className="bg-amber-50/50 p-4 rounded-2xl border border-amber-100/50 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-black text-amber-800 uppercase tracking-wider flex items-center gap-1">
+                      📂 Chia theo danh mục chưa duyệt (Chưa đăng):
+                    </p>
+                    <span className="text-[9px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-sm uppercase">
+                      Chờ duyệt hành chính
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { id: 'all', label: 'Tất cả chưa đăng', count: pendingArticlesCount },
+                      { id: 'travel', label: 'Du lịch & Bản đồ', count: articles.filter(a => a.approved === false && getArticleGroup(a) === 'travel').length },
+                      { id: 'food', label: 'Ẩm thực đường phố', count: articles.filter(a => a.approved === false && getArticleGroup(a) === 'food').length },
+                      { id: 'history', label: 'Di tích lịch sử', count: articles.filter(a => a.approved === false && getArticleGroup(a) === 'history').length },
+                      { id: 'beauty', label: 'Spa & Làm đẹp', count: articles.filter(a => a.approved === false && getArticleGroup(a) === 'beauty').length },
+                      { id: 'other', label: 'Danh mục khác', count: articles.filter(a => a.approved === false && getArticleGroup(a) === 'other').length }
+                    ].map(opt => {
+                      if (opt.id !== 'all' && opt.count === 0) return null; // Avoid showing empty categories to keep UI clean
+                      const isSel = pendingCategoryFilter === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setPendingCategoryFilter(opt.id)}
+                          className={`px-3 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                            isSel 
+                              ? 'bg-amber-600 text-white border-transparent shadow-xs' 
+                              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          {isSel ? '📌' : ''} {opt.label}
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSel ? 'bg-amber-700 text-white' : 'bg-slate-100 text-slate-500 font-bold'}`}>
+                            {opt.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Main Articles Display Table/List */}
+              {filteredArticles.length === 0 ? (
+                <div className="bg-slate-50/50 rounded-2xl p-8 border border-dashed border-slate-200 text-center space-y-2">
+                  <div className="text-3xl">📭</div>
+                  <h4 className="text-xs font-extrabold text-slate-700">Không tìm thấy bài viết nào</h4>
+                  <p className="text-[10px] text-slate-400 max-w-sm mx-auto font-light">
+                    Không có dữ liệu bài viết phù hợp trong danh mục được chọn {activeArticleSubTab === 'pending' ? 'chờ xét duyệt' : ''} {searchTerm ? 'và phù hợp từ khóa tìm kiếm' : ''}.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-slate-400 font-bold">
+                        <th className="pb-3 pl-2">Hình đại diện</th>
+                        <th className="pb-3">Tiêu Đề Bài Báo</th>
+                        <th className="pb-3">Phân Mục</th>
+                        <th className="pb-3">Người Viết</th>
+                        <th className="pb-3">Thời gian</th>
+                        <th className="pb-3 text-center">Trạng Thái</th>
+                        <th className="pb-3 text-right pr-2">Thao Tác</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {filteredArticles.map(art => (
+                        <tr key={art.id} className="hover:bg-slate-50/50 transition-colors group">
+                          <td className="py-3 pl-2">
+                            <img src={art.image} alt={art.title} className="w-11 h-8 object-cover rounded-md border border-slate-100 shadow-3xs" />
+                          </td>
+                          <td className="py-3">
+                            <div className="max-w-md">
+                              <p className="font-extrabold text-slate-800 line-clamp-1">{art.title}</p>
+                              <p className="text-[10px] text-slate-400 font-light mt-0.5 line-clamp-1">{art.summary}</p>
+                            </div>
+                          </td>
+                          <td className="py-3">
+                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 uppercase tracking-wide font-mono">
+                              {art.category}
+                            </span>
+                          </td>
+                          <td className="py-3 text-slate-500 font-bold">{art.author}</td>
+                          <td className="py-3 text-slate-400 font-light">{art.date}</td>
+                          <td className="py-3 text-center">
+                            {art.approved === false ? (
+                              <div className="flex flex-col items-center gap-0.5">
+                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100 uppercase tracking-wider font-mono">
+                                  Chờ duyệt
+                                </span>
+                                <span className="text-[8px] text-slate-400 italic">Chưa đăng</span>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center gap-0.5">
+                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase tracking-wider font-mono">
+                                  Hoạt động
+                                </span>
+                                <span className="text-[8px] text-slate-400 italic">Đã xuất bản</span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 text-right pr-2">
+                            <div className="flex justify-end gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                              {art.approved === false && (
+                                <button
+                                  onClick={() => handleApproveArticle(art)}
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black transition-all cursor-pointer shadow-3xs"
+                                  title="Phê duyệt bài viết lên Web"
+                                >
+                                  Phê duyệt
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setPreviewArticle(art)}
+                                className="p-1.5 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors cursor-pointer"
+                                title="Xem trước bài viết"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleEditArticle(art)}
+                                className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors cursor-pointer"
+                                title="Sửa bài viết"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteArticle(art.id)}
+                                className="p-1.5 hover:bg-rose-50 text-rose-500 rounded-lg transition-colors cursor-pointer"
+                                title="Xóa bài viết"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}
