@@ -21,3 +21,6 @@ html {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+p.text-\[10px\].text-slate-400\/80.font-light.mt-0\.5 {
+    display: none;
+}
